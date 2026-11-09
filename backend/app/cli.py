@@ -108,11 +108,17 @@ def cmd_vapid(args) -> int:
 
 
 def cmd_backup(args) -> int:
+    import os
+    from pathlib import Path
+
+    out = Path(args.dest)
+    out.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
     src = connect()
-    dest = sqlite3.connect(args.dest)
+    dest = sqlite3.connect(out)
     with dest:
         src.backup(dest)
     dest.close()
+    os.chmod(out, 0o600)
     print(f"backup written to {args.dest}")
     return 0
 

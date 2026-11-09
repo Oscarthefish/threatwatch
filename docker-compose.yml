@@ -1,0 +1,54 @@
+# Threat Watch — production compose file.
+# Secrets live in an env file OUTSIDE the repository (default /etc/threatwatch/threatwatch.env, mode 600).
+# The web service binds to 127.0.0.1 only; expose it via Tailscale Serve (or Cloudflare Tunnel) — never publicly.
+name: threatwatch
+
+x-common: &common
+  image: ${TW_IMAGE:-threatwatch:latest}
+  env_file:
+    - ${TW_ENV_FILE:-/etc/threatwatch/threatwatch.env}
+  volumes:
+    - tw-data:/data
+  restart: unless-stopped
+  read_only: true
+  tmpfs:
+    - /tmp:size=32m,mode=1777
+  cap_drop: [ALL]
+  security_opt:
+    - no-new-privileges:true
+  pids_limit: 128
+  logging:
+    driver: json-file
+    options: { max-size: "10m", max-file: "3" }
+  networks: [tw]
+
+services:
+  web:
+    <<: *common
+    ports:
+      - "127.0.0.1:${TW_PORT:-8080}:8080"
+    mem_limit: ${TW_WEB_MEM:-192m}
+    cpus: 0.75
+
+  worker:
+    <<: *common
+    command: ["python", "-m", "app.worker"]
+    mem_limit: ${TW_WORKER_MEM:-256m}
+    cpus: 0.75
+    depends_on:
+      web:
+        condition: service_healthy
+    healthcheck:
+      # healthy when the scheduler heartbeat (written every 30s) is fresh
+      test: ["CMD", "python", "-c", "import sqlite3,sys,json,datetime as d; c=sqlite3.connect('/data/threatwatch.db'); v=c.execute(\"select value from settings where key='worker_heartbeat'\").fetchone(); t=d.datetime.fromisoformat(json.loads(v[0]).replace('Z','+00:00')); sys.exit(0 if (d.datetime.now(d.timezone.utc)-t).total_seconds()<180 else 1)"]
+      interval: 60s
+      timeout: 10s
+      start_period: 90s
+      retries: 3
+
+volumes:
+  tw-data:
+
+networks:
+  tw:
+    driver: bridge

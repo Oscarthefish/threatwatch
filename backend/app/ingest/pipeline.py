@@ -282,7 +282,7 @@ def _parse_cve_record(rec: dict) -> dict:
     return {"description": desc, "vendor": vendor, "product": product, "cvss": best, "refs": refs}
 
 
-def ingest_cve_enrichment(conn: sqlite3.Connection, src: dict, limit: int = 40) -> int:
+def ingest_cve_enrichment(conn: sqlite3.Connection, src: dict, limit: int = 60) -> int:
     recent = iso(utcnow() - timedelta(days=30))
     rows = conn.execute(
         """SELECT v.cve_id FROM vulnerabilities v
