@@ -1,0 +1,27 @@
+# Secrets and data — never commit
+.env
+*.env
+!deploy/*.example.env
+secrets/
+data/
+.localdata/
+*.db
+*.db-wal
+*.db-shm
+backups/
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Node
+node_modules/
+frontend/dist/
+*.tsbuildinfo
+
+# OS / editor
+.DS_Store
+.idea/
+.vscode/

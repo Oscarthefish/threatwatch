@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom"><title>FIXTURE Research</title>
+<entry><title>Exampleware VPN flaw CVE-2099-0001 exploited in attacks, researchers say</title>
+<link href="https://research.example.org/posts/cve-2099-0001"/><id>res-1</id><updated>2026-11-09T05:00:00Z</updated>
+<summary>Second-source reporting on CVE-2099-0001 exploitation with new IOCs: 198.51.100[.]23. Attackers used T1190 and dropped a web shell.</summary></entry>
+<entry><title>Contoso Health ransomware: Akira leak site posts stolen data</title>
+<link href="https://research.example.org/posts/contoso-health-leak"/><id>res-2</id><updated>2026-11-09T06:00:00Z</updated>
+<summary>The Akira ransomware gang published 40 GB allegedly stolen from Contoso Health. Hash: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855</summary></entry>
+</feed>
