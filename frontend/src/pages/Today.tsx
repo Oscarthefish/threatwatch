@@ -102,7 +102,7 @@ export default function Today() {
         <Tile to="/breaking" n={st.critical_24h} label="Critical · 24h" tone="crit" sub={`of ${st.total_24h} stories`} />
         <Tile to="/breaking" n={st.high_24h} label="High · 24h" tone="high" />
         <Tile to="/vulns?kev=1" n={st.kev_7d} label="New KEV · 7d" tone="crit" sub="confirmed exploitation" />
-        <Tile to="/watch" n={st.watch_updates} label="Following" sub={`with new reporting${st.review_queue ? ` · ${st.review_queue} to review` : ''}`} tone={st.review_queue ? 'warn' : ''} />
+        <Tile to="/watch" n={st.watch_updates} label="Following" sub={st.review_queue ? `${st.review_queue} waiting for review` : 'with new reporting'} tone={st.review_queue ? 'warn' : ''} />
         <Tile to="/settings" n={`${st.sources_ok}/${st.sources_total}`} label="Sources OK" tone={st.sources_failing.length ? 'warn' : ''}
           sub={st.sources_failing.length ? `failing: ${st.sources_failing.join(', ')}` : 'all collecting'} />
       </div>
@@ -118,7 +118,7 @@ export default function Today() {
               {!b ? <Empty title="No briefing yet">The first briefing is generated after the initial collection, then daily at 7:00 AM NZ time.</Empty> : <>
                 {b.headline && <p className="strong mb-0">{b.headline}</p>}
                 <p className="xsmall faint mb-2">
-                  {b.date} · {fmtDate(b.generated_at)} · {b.method === 'ai' ? `AI synthesis (${b.model}) — verify against sources` : 'ranked from source reporting; summaries are publishers’ text'}
+                  {b.date} · {fmtDate(b.generated_at)} · {b.method === 'ai' ? `AI synthesis (${b.model}), check against the sources` : 'ranked from source reporting, using the publishers’ own text'}
                 </p>
                 {b.items.map((it, i) => <BriefItem key={i} it={it} n={i + 1} open={open.has(i)}
                   onToggle={() => setOpen((s) => { const n = new Set(s); if (n.has(i)) n.delete(i); else n.add(i); return n })} />)}

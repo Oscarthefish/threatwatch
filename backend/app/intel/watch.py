@@ -132,7 +132,7 @@ def create_watch(
         (kind, title, canonical_key, description[:2000], jdumps(identifiers), jdumps(aliases), jdumps(_clean_list(context_terms)),
          jdumps(_clean_list(exclude_terms)), notify_pref, jdumps(_clean_list(tags)), notes[:10000], origin_article_id, now, now, now),
     ).lastrowid
-    timeline(conn, wid, "created", f"Started following: {title}", f"Kind: {kind}; identifiers: {', '.join(identifiers) or '—'}")
+    timeline(conn, wid, "created", f"Started following: {title}", f"Matching {', '.join([*identifiers, *aliases][:6]) or title}")
     if origin_article_id:
         link_evidence(conn, wid, origin_article_id, 1.0, ["Article you followed from"], linked_by="origin")
     backfill(conn, wid, days=backfill_days)
@@ -274,13 +274,13 @@ def evaluate(conn, watch: dict, article: dict, use_ai: bool = True) -> str | Non
             v = ai.adjudicate_match(conn, watch, article, titles)
             if v.get("same_subject") and v.get("confidence") in ("high", "medium"):
                 status = "linked"
-                reasons.append(f"AI check: same subject ({v['confidence']}) — {v.get('reason','')[:200]}")
+                reasons.append(f"AI check: same subject ({v['confidence']} confidence). {v.get('reason','')[:200]}")
             elif not v.get("same_subject") and v.get("confidence") == "high":
                 status = "rejected"
-                reasons.append(f"AI check: different subject — {v.get('reason','')[:200]}")
+                reasons.append(f"AI check: different subject. {v.get('reason','')[:200]}")
             else:
                 status = "candidate"
-                reasons.append(f"AI check inconclusive — {v.get('reason','')[:200]}")
+                reasons.append(f"AI check inconclusive. {v.get('reason','')[:200]}")
         except ai.AIUnavailable:
             if status == "linked" and watch["kind"] == "incident":
                 status = "candidate"  # body-only incident mention: ask the user rather than auto-merge
@@ -479,7 +479,7 @@ def update_record(conn: sqlite3.Connection, watch_id: int, initial: bool = False
         for e in new:
             sig, why = assess[e["article_id"]]
             if sig in ("important", "meaningful"):
-                changes.append({"claim": f"{e['title']} ({e['source_name']}) — {why}", "article_ids": [e["article_id"]]})
+                changes.append({"claim": f"{e['title']} ({e['source_name']}). {why}", "article_ids": [e["article_id"]]})
 
     version = (prev["version"] + 1) if prev else 1
     now = now_iso()
@@ -559,7 +559,7 @@ def _notify_for(conn, w: dict, new: list[dict], assess: dict[int, tuple[str, str
             conn,
             kind="watch_important" if sig == "important" else "watch_update",
             title=f"{w['title']}: {'important update' if sig == 'important' else 'new development'}",
-            body=f"{e['title']} — {e['source_name']}. {why}"[:500],
+            body=f"{e['title']} ({e['source_name']}). {why}"[:500],
             link=f"/watch/{w['id']}",
             watch_id=w["id"],
             article_id=e["article_id"],

@@ -39,7 +39,7 @@ def compile_digest(conn: sqlite3.Connection, day_label: str) -> bool:
     if not rows:
         return False
     lines = [f"• {r['watch_title'] or 'Watch'}: {r['body'][:160]}" for r in rows[:30]]
-    created = notify(conn, kind="digest", title=f"Threat Watch digest — {len(rows)} update(s)", body="\n".join(lines),
+    created = notify(conn, kind="digest", title=f"Daily digest: {len(rows)} update{'s' if len(rows) != 1 else ''} on what you follow", body="\n".join(lines),
                      link="/watch", dedupe_key=f"digest:{day_label}")
     conn.execute(f"UPDATE notifications SET digest_pending=2 WHERE id IN ({','.join(str(r['id']) for r in rows)})")
     return created

@@ -63,3 +63,39 @@ Filter chips and the severity label extend their hit area with a pseudo-element.
 - Use tokens, not literal values. New one-off inline styles need a reason.
 - Generated (AI) content is always labelled and never styled as source evidence.
 - Copy: plain, specific, no marketing phrasing, no em dashes in UI strings.
+
+## Redesign log (November 2026)
+
+### Changed
+| Area | Before | After |
+|---|---|---|
+| Colour | Primary button 2.5:1 (dark) / 4.0:1 (light); faint text, high/medium severity and OK colours failed AA | Every text colour computed to ≥ 4.5:1 in both themes; inputs and focus ≥ 3:1 |
+| System | 21 font sizes, 13 radii, 26 spacing values, 98 inline styles, shadowed card around everything | 6 type steps, 7 spacing steps, 3 radii, tokens only (the few inline styles left set computed values such as meter widths); flat panels, elevation only for overlays |
+| Touch | 30–38 px targets | 44 px targets (visual 32 px where dense, hit area kept) |
+| Keyboard | Sheets without Esc, focus trap or focus return; browser `confirm()` | Accessible Sheet and Confirm; skip link; `/` search shortcut; visible focus on every stop |
+| Shell | Ungrouped nav, no page titles, cramped mobile search, Back on one page | Grouped nav, live collection status, page titles, full-width mobile search, consistent Back |
+| Today | Long single column, repeated items | Tiles, compact briefing, stable “since last visit”, KEV / Following / NZ rail |
+| Article | Empty “Summary” without AI, long source text first | Briefing document: In brief, What to do, collapsible source, facts sidebar |
+| Following | 7-field form, 6 tabs, raw match scores | One-tap follow for CVE/actor/malware, 4 tabs, plain-language match reasons, review banner |
+| Lists | Actions wrapped under metadata on phones, one generic empty state | Two-column cards, side-by-side filters, filtered-empty vs empty states, product-first CVE rows |
+| SecOps | None | Evidence-based “What to do” steps with stated basis |
+| Copy | 26 em dashes, sparkle icon for AI, internal terms (candidate, heuristic, scores) | No em dashes in UI or notifications, plain “AI” label, plain language |
+| Sign in / Settings | Bare card; sources table scrolled sideways on phones | Two-column sign-in with factual description; Settings as health, sources with switches, AI, device, data |
+
+### Verified
+- axe-core WCAG 2.2 AA: 0 violations across 96 scans (16 routes × 390 / 768 / 1440 px × light / dark) plus the sign-in page.
+- No horizontal overflow at any of those widths.
+- Keyboard: 60 consecutive Tab stops on Today, all with a visible focus indicator; Follow sheet traps focus, closes on Esc, returns focus.
+- Accessibility tree: one h1 per page, banner / navigation / main / search landmarks, no unnamed controls.
+- Banned-phrase and em-dash scan of UI and notification copy: clean.
+
+### Deliberately left alone
+- No social preview image or Open Graph tags: the app is private and `noindex`.
+- No web font: system fonts render instantly and make no third-party request.
+- No hover-only information: severity reasons and other explanations are tap-to-reveal.
+- Data model, API and matching rules unchanged except the fixes recorded in git history (CVE body mentions, roundups never important).
+
+### Recommended next
+- Real-device check on Android once HTTPS (Tailscale Serve) is in place: PWA install, offline reading, push.
+- Route-level code splitting (bundle is ~115 kB gzipped; fine today).
+- A short user test of the Follow flow after a week of real use, to tune notification defaults.

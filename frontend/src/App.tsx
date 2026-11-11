@@ -3,7 +3,8 @@ import { Route, Routes } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
 import { api, ApiError, setUnauthorizedHandler } from './api'
 import { Layout, useTheme } from './components/Layout'
-import { Loading } from './components/ui'
+import { Loading, usePageTitle } from './components/ui'
+import { Link } from 'react-router-dom'
 import Login from './pages/Login'
 import Today from './pages/Today'
 import Breaking from './pages/Breaking'
@@ -61,8 +62,19 @@ export default function App() {
         <Route path="/search" element={<Search />} />
         <Route path="/notifications" element={<Notifications />} />
         <Route path="/settings" element={<Settings onLogout={() => setAuth('out')} />} />
-        <Route path="*" element={<div className="empty"><h3>Page not found</h3></div>} />
+        <Route path="*" element={<NotFound />} />
       </Routes>
     </Layout>
+  )
+}
+
+function NotFound() {
+  usePageTitle('Page not found')
+  return (
+    <div className="empty">
+      <h1>Page not found</h1>
+      <p>This address does not match any page. The item may have been removed by the retention policy.</p>
+      <Link className="btn primary" to="/">Go to Today</Link>
+    </div>
   )
 }

@@ -7,7 +7,7 @@ import { IconBack, IconBookmark, IconExternal } from './icons'
 
 // ------------------------------------------------------------------ time
 export function timeAgo(iso?: string | null): string {
-  if (!iso) return '—'
+  if (!iso) return 'never'
   const t = new Date(iso).getTime()
   const s = Math.round((Date.now() - t) / 1000)
   if (s < 60) return 'just now'
@@ -17,7 +17,7 @@ export function timeAgo(iso?: string | null): string {
   return new Date(iso).toLocaleDateString('en-NZ', { day: 'numeric', month: 'short', year: 'numeric' })
 }
 export function fmtDate(iso?: string | null): string {
-  if (!iso) return '—'
+  if (!iso) return 'unknown'
   return new Date(iso).toLocaleString('en-NZ', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'Pacific/Auckland' })
 }
 export const TimeAgo = ({ iso }: { iso?: string | null }) => <time dateTime={iso ?? undefined} title={fmtDate(iso)}>{timeAgo(iso)}</time>

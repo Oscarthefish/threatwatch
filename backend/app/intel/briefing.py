@@ -147,6 +147,6 @@ def generate(conn: sqlite3.Connection, hours: int = 24, notify_user: bool = True
         (local_today(), now_iso(), method, model, jdumps(content), jdumps(ids)),
     ).lastrowid
     if notify_user and items:
-        notify(conn, kind="briefing", title=f"Daily briefing — {local_today()}", body=headline[:300], link="/",
+        notify(conn, kind="briefing", title=f"Daily briefing for {local_today()} is ready", body=headline[:300], link="/",
                dedupe_key=f"briefing:{local_today()}")
     return bid
