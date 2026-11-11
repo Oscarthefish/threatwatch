@@ -110,6 +110,10 @@ def main() -> None:
     n = pipeline.backfill_actions(conn)
     if n:
         log.info("computed SecOps actions for %d stored articles", n)
+    from .intel.watch import reevaluate_all
+    n = reevaluate_all(conn)
+    if n:
+        log.info("re-checked %d followed items with updated matching rules", n)
     has_briefing = conn.execute("SELECT 1 FROM briefings LIMIT 1").fetchone()
     conn.close()
     log.info("worker starting; AI %s; interval %d min", "enabled" if s.ai_enabled else "disabled", s.ingest_interval_minutes)

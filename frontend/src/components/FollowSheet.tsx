@@ -5,82 +5,136 @@ import { api } from '../api'
 import type { WatchSuggestion } from '../types'
 import { Field, useToast } from './ui'
 import { Sheet } from './Sheet'
+import { KINDS, kindLabel, NOTIFY, splitList } from './follow'
 
-const KINDS = ['incident', 'vulnerability', 'actor', 'malware', 'campaign', 'product', 'topic']
-const PREFS: [string, string][] = [
-  ['important', 'Important changes immediately'],
-  ['all', 'All meaningful new findings'],
-  ['digest', 'Daily digest'],
-  ['silent', 'Silent tracking'],
-]
-const split = (s: string) => s.split(',').map((x) => x.trim()).filter(Boolean)
+const QUICK = new Set(['vulnerability', 'actor', 'malware'])
 
+function toForm(s: WatchSuggestion) {
+  return { kind: s.kind, title: s.title, identifiers: s.identifiers.join(', '), aliases: s.aliases.join(', '),
+    context: s.context_terms.join(', '), exclude: '', notify: 'important' }
+}
+
+/**
+ * Follow flow. A CVE, actor or malware family is one tap (its identity is already known);
+ * incidents and topics ask only for what is needed to avoid false matches. Matching rules live under "Advanced".
+ */
 export function FollowSheet({ suggestions, originArticleId, onClose }: { suggestions: WatchSuggestion[]; originArticleId?: number; onClose: () => void }) {
-  const [sel, setSel] = useState(0)
-  const first = suggestions[0] ?? { kind: 'topic', title: '', identifiers: [], aliases: [], context_terms: [], existing_watch_id: null }
-  const [form, setForm] = useState(() => toForm(first))
+  const manual = suggestions.length === 0 || (suggestions.length === 1 && !suggestions[0].title)
+  const list = manual ? [] : suggestions
+  const [sel, setSel] = useState(() => Math.max(0, list.findIndex((s) => QUICK.has(s.kind) && !s.existing_watch_id)))
+  const [form, setForm] = useState(() => toForm(list[sel] ?? { kind: 'incident', title: '', identifiers: [], aliases: [], context_terms: [], existing_watch_id: null }))
+  const [tried, setTried] = useState(false)
   const qc = useQueryClient()
   const nav = useNavigate()
   const toast = useToast()
+  const current = list[sel]
+  const quick = !manual && QUICK.has(form.kind) && splitList(form.identifiers).length > 0
+
   const m = useMutation({
     mutationFn: () => api.post<{ id: number; created: boolean }>('/api/watches', {
-      kind: form.kind, title: form.title, description: form.description, identifiers: split(form.identifiers), aliases: split(form.aliases),
-      context_terms: split(form.context), exclude_terms: split(form.exclude), notify_pref: form.notify, origin_article_id: originArticleId ?? null,
+      kind: form.kind, title: form.title.trim(), identifiers: splitList(form.identifiers), aliases: splitList(form.aliases),
+      context_terms: splitList(form.context), exclude_terms: splitList(form.exclude), notify_pref: form.notify, origin_article_id: originArticleId ?? null,
     }),
-    onSuccess: (r) => { qc.invalidateQueries(); toast(r.created ? 'Now following. Earlier reporting from the last 30 days was checked.' : 'You already follow this. Opened the existing watch.'); onClose(); nav(`/watch/${r.id}`) },
+    onSuccess: (r) => {
+      qc.invalidateQueries()
+      toast(r.created ? 'Following. Reporting from the last 30 days has been checked.' : 'You already follow this. Opened it.')
+      onClose(); nav(`/watch/${r.id}`)
+    },
   })
 
-  function pick(i: number) { setSel(i); setForm(toForm(suggestions[i])) }
-  const current = suggestions[sel]
+  const titleErr = form.title.trim().length < 2 ? 'Give it a name of at least 2 characters.' : null
+  const idErr = form.kind === 'incident' && !splitList(form.identifiers).length && !splitList(form.aliases).length
+    ? 'Add the victim organisation or incident name. Without it, unrelated incidents could be merged.' : null
+  const submit = (e: React.FormEvent) => { e.preventDefault(); setTried(true); if (!titleErr && !idErr) m.mutate() }
 
-  const needsId = form.kind === 'incident' && !split(form.identifiers).length && !split(form.aliases).length
-  const [tried, setTried] = useState(false)
+  const advanced = (
+    <details className="disclose">
+      <summary>Advanced matching</summary>
+      <Field label="Aliases" hint="Other names for the same subject. Comma separated.">
+        <input className="input" value={form.aliases} onChange={(e) => setForm({ ...form, aliases: e.target.value })} />
+      </Field>
+      <Field label="Context terms" hint="Raise relevance but never link a report on their own.">
+        <input className="input" value={form.context} onChange={(e) => setForm({ ...form, context: e.target.value })} />
+      </Field>
+      <Field label="Exclude terms" hint="Reports containing these are never linked.">
+        <input className="input" value={form.exclude} onChange={(e) => setForm({ ...form, exclude: e.target.value })} />
+      </Field>
+      {quick && (
+        <Field label="Identifiers" hint="Comma separated.">
+          <input className="input" value={form.identifiers} onChange={(e) => setForm({ ...form, identifiers: e.target.value })} />
+        </Field>
+      )}
+    </details>
+  )
+
+  const notify = (
+    <fieldset className="choices">
+      <legend className="field-label">Tell me about</legend>
+      {NOTIFY.map(([v, label, hint]) => (
+        <label key={v} className={`choice ${form.notify === v ? 'on' : ''}`}>
+          <input type="radio" name="notify" value={v} checked={form.notify === v} onChange={() => setForm({ ...form, notify: v })} />
+          <span><b>{label}</b><small>{hint}</small></span>
+        </label>
+      ))}
+    </fieldset>
+  )
 
   return (
-    <Sheet title="Follow" onClose={onClose}>
-      <p className="muted small">Following keeps a versioned intelligence record. Every collection run checks new reporting against it.</p>
-      {suggestions.length > 1 && <>
-        <div className="field-label mt-3">What do you want to track?</div>
-        {suggestions.map((s, i) => (
-          <button type="button" key={i} className={`suggest ${i === sel ? 'on' : ''}`} aria-pressed={i === sel} onClick={() => pick(i)}>
-            <span className="chip">{s.kind}</span><span className="grow">{s.title || 'New watch'}</span>
-            {s.existing_watch_id && <span className="small muted">following</span>}
-          </button>
-        ))}
-      </>}
+    <Sheet title={manual ? 'Follow something new' : 'Follow'} onClose={onClose}>
+      {list.length > 1 && (
+        <div role="radiogroup" aria-label="What to follow" className="mb-3">
+          {list.map((s, i) => (
+            <button type="button" role="radio" aria-checked={i === sel} key={i} className={`suggest ${i === sel ? 'on' : ''}`}
+              onClick={() => { setSel(i); setForm(toForm(s)); setTried(false) }}>
+              <span className="chip">{kindLabel(s.kind)}</span><span className="grow">{s.title}</span>
+              {s.existing_watch_id && <span className="xsmall muted">following</span>}
+            </button>
+          ))}
+        </div>
+      )}
+
       {current?.existing_watch_id ? (
-        <div className="notice row between mt-3">You already follow this.<button type="button" className="btn primary" onClick={() => nav(`/watch/${current.existing_watch_id}`)}>Open watch</button></div>
+        <div className="notice row between">
+          <span>You already follow this.</span>
+          <button type="button" className="btn primary" onClick={() => { onClose(); nav(`/watch/${current.existing_watch_id}`) }}>Open</button>
+        </div>
       ) : (
-        <form noValidate className="mt-3" onSubmit={(e) => { e.preventDefault(); setTried(true); if (!needsId && form.title.trim().length >= 2) m.mutate() }}>
-          <div className="row top">
-            <div style={{ flex: '1 1 140px' }}><Field label="Type">
-              <select className="input" value={form.kind} onChange={(e) => setForm({ ...form, kind: e.target.value })}>{KINDS.map((k) => <option key={k}>{k}</option>)}</select></Field></div>
-            <div style={{ flex: '3 1 240px' }}><Field label="Name" error={tried && form.title.trim().length < 2 ? 'Give this watch a name of at least 2 characters.' : null}>
-              <input className="input" data-autofocus value={form.title} aria-invalid={tried && form.title.trim().length < 2} onChange={(e) => setForm({ ...form, title: e.target.value })} /></Field></div>
-          </div>
-          <Field label="Identifiers" error={tried && needsId ? 'Add the victim organisation or incident name, so unrelated incidents are not merged.' : null}
-            hint={form.kind === 'incident' ? 'Comma separated. Victim organisation or incident name.' : 'Comma separated. CVE IDs or canonical names.'}>
-            <input className="input" value={form.identifiers} aria-invalid={tried && needsId} onChange={(e) => setForm({ ...form, identifiers: e.target.value })} />
-          </Field>
-          {current?.hint && <p className="small muted">{current.hint}</p>}
-          <Field label="Aliases" hint="Other names for the same subject."><input className="input" value={form.aliases} onChange={(e) => setForm({ ...form, aliases: e.target.value })} /></Field>
-          <Field label="Context terms" hint="Raise relevance but never link an article on their own."><input className="input" value={form.context} onChange={(e) => setForm({ ...form, context: e.target.value })} /></Field>
-          <Field label="Exclude terms" hint="Articles containing these are never linked."><input className="input" value={form.exclude} onChange={(e) => setForm({ ...form, exclude: e.target.value })} /></Field>
-          <Field label="Notify me about">
-            <select className="input" value={form.notify} onChange={(e) => setForm({ ...form, notify: e.target.value })}>{PREFS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select>
-          </Field>
-          {m.isError && <div className="alert mb-3" role="alert"><p className="mb-0">Not saved: {(m.error as Error).message}. Your entries are kept; try again.</p></div>}
+        <form noValidate onSubmit={submit}>
+          {quick ? (
+            <div className="subject">
+              <span className="chip">{kindLabel(form.kind)}</span>
+              <div className="strong">{form.title}</div>
+              {splitList(form.aliases).length > 0 && <div className="xsmall muted">Also matches: {splitList(form.aliases).join(', ')}</div>}
+              <p className="xsmall muted mb-0">New reporting that names this is linked automatically. Past 30 days are checked now.</p>
+            </div>
+          ) : <>
+            {manual && (
+              <Field label="Type">
+                <select className="input" value={form.kind} onChange={(e) => setForm({ ...form, kind: e.target.value })}>
+                  {KINDS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+                </select>
+              </Field>
+            )}
+            <Field label="Name" error={tried ? titleErr : null}>
+              <input className="input" data-autofocus value={form.title} aria-invalid={tried && !!titleErr} onChange={(e) => setForm({ ...form, title: e.target.value })} />
+            </Field>
+            <Field label={form.kind === 'incident' ? 'Victim or incident name' : 'Names to match'} error={tried ? idErr : null}
+              hint={form.kind === 'incident' ? 'Comma separated. Actor or malware names go under Advanced as context, so other incidents by the same group are not merged.'
+                : 'Comma separated. CVE IDs, product, actor or malware names.'}>
+              <input className="input" value={form.identifiers} aria-invalid={tried && !!idErr} onChange={(e) => setForm({ ...form, identifiers: e.target.value })} />
+            </Field>
+          </>}
+
+          {notify}
+          {advanced}
+
+          {m.isError && <div className="alert mt-3" role="alert"><p className="mb-0">Not saved: {(m.error as Error).message}. Your entries are kept; try again.</p></div>}
           <div className="sheet-actions">
-            <button type="button" className="btn" onClick={onClose}>Cancel</button>
-            <button className="btn primary" aria-busy={m.isPending || undefined}>Follow</button>
+            <button type="button" className="btn quiet" onClick={onClose}>Cancel</button>
+            <button className="btn primary" aria-busy={m.isPending || undefined} data-autofocus={quick || undefined}>Follow</button>
           </div>
         </form>
       )}
     </Sheet>
   )
-}
-
-function toForm(s: WatchSuggestion) {
-  return { kind: s.kind, title: s.title, description: '', identifiers: s.identifiers.join(', '), aliases: s.aliases.join(', '),
-    context: s.context_terms.join(', '), exclude: '', notify: 'important' }
 }

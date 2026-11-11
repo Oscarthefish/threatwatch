@@ -189,7 +189,7 @@ def score_match(watch: dict, article: dict, article_entities: dict[str, set[str]
         if entities.CVE_RE.fullmatch(ident.upper()):
             if ident.lower() in cves:
                 in_title = ident.lower() in title.lower()
-                score += 0.7 if in_title else 0.55
+                score += 0.8 if in_title else 0.65  # a CVE ID is a unique identifier: any explicit mention links
                 id_hits += 1
                 reasons.append(f"{ident.upper()} {'in headline' if in_title else 'mentioned'}")
             continue
@@ -257,8 +257,9 @@ def _entities_for(conn, article_id: int) -> dict[str, set[str]]:
 
 def evaluate(conn, watch: dict, article: dict, use_ai: bool = True) -> str | None:
     """Score one article against one watch and persist the decision. Returns status or None."""
-    if conn.execute("SELECT 1 FROM watch_evidence WHERE watch_id=? AND article_id=?", (watch["id"], article["id"])).fetchone():
-        return None
+    prior = conn.execute("SELECT status FROM watch_evidence WHERE watch_id=? AND article_id=?", (watch["id"], article["id"])).fetchone()
+    if prior and prior["status"] != "candidate":
+        return None  # already linked, or rejected by the user (never re-linked automatically)
     ents = _entities_for(conn, article["id"])
     score, reasons, met = score_match(watch, article, ents, _profile(conn, watch))
     if not met or score < CANDIDATE_THRESHOLD:
@@ -285,6 +286,14 @@ def evaluate(conn, watch: dict, article: dict, use_ai: bool = True) -> str | Non
                 status = "candidate"  # body-only incident mention: ask the user rather than auto-merge
     elif needs_ai and status == "linked" and watch["kind"] == "incident":
         status = "candidate"
+    if prior:  # re-evaluation of a review-queue item (e.g. after rule or term changes)
+        if status != "linked":
+            return None
+        conn.execute("UPDATE watch_evidence SET status='linked', match_score=?, match_reasons=?, linked_at=? WHERE watch_id=? AND article_id=?",
+                     (round(score, 3), jdumps(reasons), now_iso(), watch["id"], article["id"]))
+        timeline(conn, watch["id"], "evidence", article["title"], f"{article.get('source_name', '')} · now matches: {'; '.join(reasons)[:300]}",
+                 article_id=article["id"], at=article["published_at"])
+        return "linked"
     link_evidence(conn, watch["id"], article["id"], score, reasons, status=status)
     return status
 
@@ -585,3 +594,23 @@ def suggest_from_article(conn, article_id: int) -> list[dict]:
         row = conn.execute("SELECT id FROM watches WHERE canonical_key=?", (k,)).fetchone()
         o["existing_watch_id"] = row[0] if row else None
     return out
+
+
+MATCH_RULES_VERSION = 2
+
+
+def reevaluate_all(conn: sqlite3.Connection) -> int:
+    """Re-check active watches once after matching rules change (review-queue items can be upgraded; rejections stay)."""
+    from ..db import get_setting, set_setting
+
+    if get_setting(conn, "match_rules_version", 1) >= MATCH_RULES_VERSION:
+        return 0
+    ids = [r[0] for r in conn.execute("SELECT id FROM watches WHERE status='active'")]
+    for wid in ids:
+        try:
+            backfill(conn, wid, days=60)
+            update_record(conn, wid)
+        except Exception:
+            log.exception("re-evaluating watch %s failed", wid)
+    set_setting(conn, "match_rules_version", MATCH_RULES_VERSION)
+    return len(ids)

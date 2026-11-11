@@ -322,7 +322,7 @@ button.sev span { text-decoration: underline dotted; text-underline-offset: 3px;
 .conf.official, .conf.corroborated { color: var(--ok); }
 .kev { background: color-mix(in srgb, var(--sev-critical) 12%, transparent); color: var(--sev-critical); }
 .sig { font-size: var(--t-xs); font-weight: var(--w-bold); text-transform: uppercase; letter-spacing: .04em; padding: 1px var(--s-2); border-radius: var(--r-sm); background: var(--surface-2); color: var(--muted); }
-.sig.important { background: color-mix(in srgb, var(--sev-high) 14%, transparent); color: var(--sev-high); }
+.sig.important { background: color-mix(in srgb, var(--sev-high) 8%, var(--surface)); color: var(--sev-high); }
 .sig.meaningful { background: var(--primary-soft); color: var(--primary); }
 .cite { display: inline-flex; align-items: center; min-height: 22px; padding: 0 6px; border-radius: var(--r-sm); background: var(--surface-2); font-size: var(--t-xs);
   font-weight: var(--w-medium); color: var(--link); margin: 0 2px; }
@@ -525,3 +525,30 @@ details.disclose[open] > summary { margin-bottom: var(--s-2); }
 .ml-1 { margin-left: var(--s-1); }
 .chip.link-chip { color: var(--link); }
 .chip.link-chip:hover { text-decoration: underline; text-underline-offset: 2px; }
+
+/* ====================== Following (batch 4) ====================== */
+.watch-grid { display: grid; gap: var(--s-3); grid-template-columns: minmax(0, 1fr); }
+@media (min-width: 900px) { .watch-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.watch-card { display: flex; flex-direction: column; gap: var(--s-1); }
+.watch-card.fresh { border-left: 3px solid var(--primary); }
+.wc-title { font-size: var(--t-md); line-height: var(--lh-tight); }
+.watch-bar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--s-2); padding-top: var(--s-3); border-top: var(--hairline); }
+.subject { padding: var(--s-3) var(--s-4); border: 1px solid var(--primary); background: var(--primary-soft); border-radius: var(--r-sm); margin-bottom: var(--s-4); }
+.subject .strong { font-size: var(--t-lg); margin: var(--s-1) 0; }
+fieldset.choices { border: 0; padding: 0; margin: 0 0 var(--s-3); }
+fieldset.choices legend { padding: 0; margin-bottom: var(--s-1); }
+.choice { display: flex; align-items: flex-start; gap: var(--s-3); padding: var(--s-2) var(--s-3); min-height: var(--control-h); border: 1px solid var(--border);
+  border-radius: var(--r-sm); cursor: pointer; margin-bottom: var(--s-1); }
+.choice:hover { background: var(--surface-2); }
+.choice.on { border-color: var(--primary); background: var(--primary-soft); }
+.choice input { width: 18px; height: 18px; margin-top: 2px; accent-color: var(--primary); flex-shrink: 0; }
+.choice span { display: flex; flex-direction: column; }
+.choice b { font-size: var(--t-sm); }
+.choice small { font-size: var(--t-xs); color: var(--muted); }
+details.panel > summary { padding: 0 var(--s-4); }
+details.versions .version { padding: var(--s-3) 0; border-top: var(--hairline); }
+details.versions .version:first-child { border-top: 0; padding-top: 0; }
+.panel.review { border-color: color-mix(in srgb, var(--sev-high) 45%, var(--border)); }
+.sig.minor, .sig.duplicate { color: var(--muted); }
+textarea.input.notes { min-height: 180px; }
+.danger-zone { border-color: color-mix(in srgb, var(--danger) 35%, var(--border)); }

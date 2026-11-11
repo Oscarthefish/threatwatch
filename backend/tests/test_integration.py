@@ -334,3 +334,16 @@ def test_security_headers(client):
     assert "default-src 'self'" in r.headers["content-security-policy"]
     assert r.headers["x-frame-options"] == "DENY"
     assert r.headers["cache-control"] == "no-store"
+
+
+def test_cve_mentioned_only_in_body_links_to_vulnerability_watch(conn, fixture_sources):
+    """Regression: an explicit CVE ID in the body (e.g. a CISA 'adds N KEVs' post) is a definitive match."""
+    src = conn.execute("SELECT id FROM sources WHERE key='fx-news'").fetchone()[0]
+    aid = conn.execute(
+        "INSERT INTO articles(source_id,url,canonical_url,title,summary_text,retrieved_at,published_at) VALUES(?,?,?,?,?,?,?)",
+        (src, "https://news.example.com/kev-adds", "https://news.example.com/kev-adds", "CISA Adds Six Known Exploited Vulnerabilities to Catalog",
+         "CISA added CVE-2099-0007 Example Gateway Command Injection and five others.", "2026-11-09T00:00:00Z", "2026-11-09T00:00:00Z")).lastrowid
+    pipeline.process_article(conn, aid)
+    wid, _ = watch.create_watch(conn, kind="vulnerability", title="CVE-2099-0007 Example Gateway")
+    st = conn.execute("SELECT status FROM watch_evidence WHERE watch_id=? AND article_id=?", (wid, aid)).fetchone()
+    assert st and st[0] == "linked"
