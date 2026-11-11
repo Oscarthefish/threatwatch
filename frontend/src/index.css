@@ -737,3 +737,27 @@ kbd.key { position: static; display: inline-block; min-width: 22px; text-align: 
 .kbd-row:first-child { border-top: 0; }
 .kbd-row dd { margin: 0; color: var(--muted); text-align: right; }
 .kbd-row dt { white-space: nowrap; }
+
+/* ====================== Guided tour ====================== */
+.navlist button { display: flex; align-items: center; gap: var(--s-3); min-height: var(--control-h); padding: 0 var(--s-2); width: 100%; background: none; border: 0;
+  border-top: var(--hairline); color: var(--text); cursor: pointer; text-align: left; font: inherit; }
+.navlist button:hover { background: var(--surface-2); }
+.navlist button svg { width: var(--icon); height: var(--icon); color: var(--muted); }
+@media (min-width: 900px) {
+  .sidebar .navbtn { display: flex; align-items: center; gap: var(--s-3); min-height: var(--control-h); padding: 0 var(--s-2); border-radius: var(--r-sm); width: 100%;
+    background: none; border: 0; color: var(--muted); font: inherit; font-weight: var(--w-medium); cursor: pointer; text-align: left; }
+  .sidebar .navbtn:hover { background: var(--surface-2); color: var(--text); }
+}
+.tour { position: fixed; inset: 0; z-index: 70; pointer-events: none; }
+.tour-block { position: fixed; inset: 0; pointer-events: auto; }
+.tour-block.dim { background: var(--overlay); }
+.tour-spot { position: fixed; border-radius: var(--r-md); box-shadow: 0 0 0 2px var(--primary), 0 0 0 9999px var(--overlay);
+  transition: left var(--dur-med) var(--ease), top var(--dur-med) var(--ease), width var(--dur-med) var(--ease), height var(--dur-med) var(--ease); }
+.tour-card { position: fixed; pointer-events: auto; background: var(--surface); border: var(--hairline); border-radius: var(--r-md);
+  box-shadow: var(--shadow-overlay); padding: var(--s-4); animation: fade var(--dur-med) var(--ease); }
+.tour-card h2 { font-size: var(--t-lg); margin: var(--s-3) 0 var(--s-2); }
+.tour-card h2:focus-visible { box-shadow: none; outline: none; }
+.tour-card p { font-size: var(--t-sm); color: var(--text); line-height: 1.55; margin-bottom: var(--s-4); }
+.tour-card kbd.key { font-size: 11px; line-height: 16px; padding: 0 5px; }
+.tour-progress { height: 3px; border-radius: 2px; background: var(--surface-2); margin-top: var(--s-2); overflow: hidden; }
+.tour-progress i { display: block; height: 100%; background: var(--primary); transition: width var(--dur-med) var(--ease); }

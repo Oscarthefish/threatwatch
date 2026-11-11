@@ -114,3 +114,16 @@ Filter chips and the severity label extend their hit area with a pseudo-element.
 | Keyboard | `/` only | `j`/`k` move, `o` open, `b` bookmark, `f` follow, `v` source, `g` + letter to change section, `?` lists them (button in the top bar) |
 
 Verified as before: 96 axe scans with 0 violations and no overflow, 60 Tab stops with visible focus, keyboard shortcuts exercised end to end.
+
+## Guided tour
+`frontend/src/components/Tour.tsx` walks through every section in 20 steps (Today, Breaking, topic feeds, an article,
+Vulnerabilities, Following, Saved, notifications, search, Settings). Each step names a route and an ordered list of
+target selectors; the target is highlighted and the card sits beside it, or docks at the bottom on phones. If a target
+is missing (for example no articles yet) the card is shown centred, and steps that need an article are skipped when
+there is none, so the tour never stalls.
+
+- Starts once automatically on the first sign-in per device (`tw-tour-seen` in localStorage), and can be restarted from
+  the sidebar, the More menu on phones, Settings and the keyboard shortcuts sheet.
+- Keyboard: arrow keys step, Esc ends, Tab stays inside the card, focus moves to each step's heading and returns to the
+  opener when the tour ends. Card verified with axe at 390 and 1440 px.
+- When adding a section, add a step to `STEPS` with plain, specific copy (no em dashes).

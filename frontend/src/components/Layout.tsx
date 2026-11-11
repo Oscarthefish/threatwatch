@@ -4,8 +4,9 @@ import { useQuery } from '@tanstack/react-query'
 import { api } from '../api'
 import { Sheet } from './Sheet'
 import { ShortcutsSheet, useShortcuts } from './Shortcuts'
+import { TourProvider, tourSeen, useTour } from './Tour'
 import { timeAgo } from './ui'
-import { IconBell, IconBolt, IconBookmark, IconBug, IconEye, IconGlobe, IconKeyboard, IconMoon, IconMore, IconSearch, IconSearchDoc, IconSettings, IconSun, IconTarget, IconToday } from './icons'
+import { IconBell, IconBolt, IconBookmark, IconBug, IconEye, IconCompass, IconGlobe, IconKeyboard, IconMoon, IconMore, IconSearch, IconSearchDoc, IconSettings, IconSun, IconTarget, IconToday } from './icons'
 
 type NavItem = { to: string; label: string; short?: string; icon: (p: React.SVGProps<SVGSVGElement>) => React.ReactElement; end?: boolean }
 
@@ -83,6 +84,10 @@ export function Layout({ children }: { children: ReactNode }) {
   const me = useQuery({ queryKey: ['me'], queryFn: () => api.get<{ unread_notifications: number }>('/api/auth/me'), refetchInterval: 120_000 })
   const unread = me.data?.unread_notifications ?? 0
   const { help, setHelp } = useShortcuts()
+  const tour = useTour()
+  const startTour = tour.start
+  // First sign-in on this device: offer the tour once.
+  useEffect(() => { if (!tourSeen()) { const t = setTimeout(startTour, 900); return () => clearTimeout(t) } }, [startTour])
 
   useEffect(() => { setMore(false); setSearching(false); window.scrollTo(0, 0) }, [loc.pathname])
   useEffect(() => {
@@ -108,6 +113,7 @@ export function Layout({ children }: { children: ReactNode }) {
   const bellLabel = `Notifications${unread ? `, ${unread} unread` : ''}`
 
   return (
+    <TourProvider value={tour.start}>
     <div className="app">
       <a href="#main" className="skip">Skip to content</a>
       <nav className="sidebar" aria-label="Main">
@@ -123,6 +129,7 @@ export function Layout({ children }: { children: ReactNode }) {
           <li><NavLink to="/notifications"><IconBell />Notifications {unread > 0 && <span className="badge" aria-label={`${unread} unread`}>{unread}</span>}</NavLink></li>
         </ul>
         <div className="sidebar-foot">
+          <button type="button" className="navbtn" onClick={tour.start}><IconCompass />Take the tour</button>
           <NavLink to="/settings"><IconSettings />Settings</NavLink>
           <CollectionStatus />
         </div>
@@ -161,17 +168,20 @@ export function Layout({ children }: { children: ReactNode }) {
           <IconMore /><span>More</span>{unread > 0 && <span className="badge" aria-label={`${unread} unread notifications`}>{unread}</span>}
         </button>
       </nav>
-      {help && <ShortcutsSheet onClose={() => setHelp(false)} />}
+      {help && <ShortcutsSheet onClose={() => setHelp(false)} onTour={() => { setHelp(false); setTimeout(tour.start, 50) }} />}
+      {tour.node}
       {more && (
         <Sheet title="More" onClose={() => setMore(false)}>
           <nav className="navlist" aria-label="More sections">
             {[INTEL[2], INTEL[4], INTEL[5], YOURS[1]].map((n) => <Link key={n.to} to={n.to}><n.icon />{n.label}</Link>)}
             <Link to="/notifications"><IconBell />Notifications {unread > 0 && <span className="badge">{unread}</span>}</Link>
             <Link to="/settings"><IconSettings />Settings</Link>
+            <button type="button" onClick={() => { setMore(false); setTimeout(tour.start, 50) }}><IconCompass />Take the tour</button>
           </nav>
           <div className="mt-3"><CollectionStatus /></div>
         </Sheet>
       )}
     </div>
+    </TourProvider>
   )
 }

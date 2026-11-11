@@ -77,9 +77,9 @@ export function useShortcuts() {
   return { help, setHelp }
 }
 
-export function ShortcutsSheet({ onClose }: { onClose: () => void }) {
+export function ShortcutsSheet({ onClose, onTour }: { onClose: () => void; onTour?: () => void }) {
   return (
-    <Sheet title="Keyboard shortcuts" onClose={onClose}>
+    <Sheet title="Keyboard shortcuts" onClose={onClose} actions={onTour && <button type="button" className="btn" onClick={onTour}>Take the guided tour</button>}>
       <div className="kbd-grid">
         {SHORTCUTS.map((g) => (
           <section key={g.group} aria-labelledby={`kb-${g.group}`}>

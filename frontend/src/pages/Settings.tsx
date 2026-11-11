@@ -4,6 +4,7 @@ import { api } from '../api'
 import type { Source } from '../types'
 import { ErrorBox, Loading, PageHeader, TimeAgo, useToast } from '../components/ui'
 import { useTheme } from '../components/Layout'
+import { useStartTour } from '../components/Tour'
 
 interface Status {
   counts: Record<string, number>; db_bytes: number; last_ingest_at: string | null; worker_heartbeat: string | null
@@ -53,6 +54,7 @@ export default function Settings({ onLogout }: { onLogout: () => void }) {
   const qc = useQueryClient()
   const toast = useToast()
   const [theme, setTheme] = useTheme()
+  const startTour = useStartTour()
   const [pushState, setPushState] = useState<string | null>(null)
   const me = useQuery({ queryKey: ['me'], queryFn: () => api.get<{ username: string }>('/api/auth/me') })
   const st = useQuery({ queryKey: ['status'], queryFn: () => api.get<Status>('/api/status'), refetchInterval: 30_000 })
@@ -136,6 +138,14 @@ export default function Settings({ onLogout }: { onLogout: () => void }) {
               <dl className="kv mb-3"><dt>Signed in as</dt><dd className="strong">{me.data?.username ?? '…'}</dd></dl>
               <button type="button" className="btn" onClick={logout}>Sign out</button>
               <p className="xsmall muted mt-3 mb-0">Signing out also clears pages saved on this device for offline reading. To change the password, run <code>deploy/local.sh password</code> on the host; it signs out every session.</p>
+            </div>
+          </section>
+
+          <section className="panel" aria-labelledby="tour-sh">
+            <header><h2 id="tour-sh">Guided tour</h2></header>
+            <div className="body">
+              <p className="small muted">A step-by-step walk through every section: what each part shows and how to use it. About three minutes.</p>
+              <button type="button" className="btn" onClick={startTour}>Take the tour</button>
             </div>
           </section>
 
