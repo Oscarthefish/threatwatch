@@ -12,7 +12,7 @@ from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel, Field
 
 from . import auth
-from .api import content, trends, user, watches
+from .api import content, groups, trends, user, watches
 from .config import get_settings
 from .db import connect, get_setting, migrate
 from .ingest.pipeline import sync_sources
@@ -96,6 +96,7 @@ def create_app() -> FastAPI:
     app.include_router(user.router)
     app.include_router(watches.router)
     app.include_router(trends.router)
+    app.include_router(groups.router)
 
     @app.api_route("/api/{rest:path}", methods=["GET", "POST", "PUT", "PATCH", "DELETE"])
     def api_404(rest: str):

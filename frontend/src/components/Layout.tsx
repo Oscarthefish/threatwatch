@@ -160,7 +160,7 @@ export function Layout({ children }: { children: ReactNode }) {
             </>
           )}
         </header>
-        <main className={`content ${loc.pathname === '/' ? 'wide' : /^\/(article|vuln|watch)\//.test(loc.pathname) ? 'doc-wide' : ''}`} id="main" tabIndex={-1}>{children}</main>
+        <main className={`content ${loc.pathname === '/' ? 'wide' : /^\/(article|vuln|watch|group)\//.test(loc.pathname) ? 'doc-wide' : ''}`} id="main" tabIndex={-1}>{children}</main>
       </div>
 
       <nav className="bottomnav" aria-label="Main">

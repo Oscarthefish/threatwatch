@@ -1,0 +1,118 @@
+import { useState } from 'react'
+import { Link, useNavigate, useParams } from 'react-router-dom'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { api, ApiError } from '../api'
+import { ArticleCard, BackLink, Empty, ErrorBox, Eyebrow, Loading, usePageTitle, useToast } from '../components/ui'
+import { RankBars } from '../components/charts'
+import { GroupTrendChart, groupPath, isGroupKind, useGroup } from '../components/GroupTrend'
+import { longDay } from '../components/trendsData'
+import { IconEye } from '../components/icons'
+
+const KIND_LABEL: Record<string, string> = { actor: 'Threat actor', ransomware: 'Ransomware group', malware: 'Malware or tool' }
+const RELATED: [string, string][] = [['groups', 'Threat groups'], ['malware', 'Malware and tools'], ['cve', 'CVEs'], ['vendor', 'Vendors'], ['attack_technique', 'ATT&CK techniques']]
+
+function relatedHref(type: string, value: string) {
+  if (type === 'cve') return `/vuln/${value}`
+  if (isGroupKind(type)) return groupPath(type, value)
+  return `/search?q=${encodeURIComponent(value)}`
+}
+
+export default function GroupPage() {
+  const { kind = '', name = '' } = useParams()
+  const [days, setDays] = useState(90)
+  const q = useGroup(kind, name, days, isGroupKind(kind))
+  const qc = useQueryClient()
+  const toast = useToast()
+  const nav = useNavigate()
+  usePageTitle(q.data?.name ?? name)
+  const follow = useMutation({
+    mutationFn: () => api.post<{ id: number }>('/api/watches', {
+      kind: q.data!.kind === 'malware' ? 'malware' : 'actor', title: q.data!.name, identifiers: [q.data!.name], aliases: q.data!.aliases, notify_pref: 'important',
+    }),
+    onSuccess: (r) => { qc.invalidateQueries({ queryKey: ['group'] }); qc.invalidateQueries({ queryKey: ['watches'] }); toast(`Following ${q.data!.name}`); nav(`/watch/${r.id}`) },
+    onError: (e) => toast(`Could not follow: ${(e as Error).message}`, 'error'),
+  })
+
+  if (!isGroupKind(kind) || (q.error instanceof ApiError && q.error.status === 404)) {
+    return (
+      <>
+        <BackLink fallback="/trends" />
+        <header className="page-head"><Eyebrow parts={['Threat group profile']} /><h1>No profile for “{name}”</h1></header>
+        <p className="muted measure">Threat Watch has no threat actor, ransomware group or malware family by that name or alias. <Link to={`/search?q=${encodeURIComponent(name)}`}>Search the reporting instead</Link>.</p>
+      </>
+    )
+  }
+  if (q.isError) return <><BackLink fallback="/trends" /><ErrorBox error={q.error} onRetry={() => q.refetch()} /></>
+  if (!q.data) return <Loading lines={10} />
+  const g = q.data
+  const related = RELATED.filter(([k]) => g.related[k]?.length)
+  const counted = g.articles.filter((a) => !a.tags.includes('roundup'))
+  const roundups = g.articles.filter((a) => a.tags.includes('roundup'))
+
+  return (
+    <div className={q.isFetching ? 'refetching' : ''}>
+      <BackLink fallback="/trends" />
+      <header className="page-head row between top">
+        <div className="grow">
+          <Eyebrow parts={[KIND_LABEL[g.kind], 'Profile from collected reporting']} />
+          <h1>{g.name}</h1>
+          {g.aliases.length > 0 && <p className="small muted mb-0">Also known as {g.aliases.join(', ')}</p>}
+        </div>
+        {g.watch
+          ? <Link className="btn on" to={`/watch/${g.watch.id}`}><IconEye />Following</Link>
+          : <button type="button" className="btn primary" aria-busy={follow.isPending || undefined} onClick={() => follow.mutate()}><IconEye />Follow {g.name}</button>}
+      </header>
+
+      <div className="tiles trend-tiles">
+        <div className="tile"><div className="l">Stories, last {g.days} days</div><div className="n">{g.stories}</div>
+          <div className="s">{g.previous ? `${g.previous} in the ${g.days} days before` : g.comparison_indicative ? 'earlier period incomplete' : 'none in the period before'}</div></div>
+        <div className="tile"><div className="l">Share of all stories</div><div className="n">{g.share}%</div>
+          <div className="s">{g.previous_share != null ? `${g.previous_share}% before` : 'no earlier data'}</div></div>
+        <div className="tile"><div className="l">Last reported</div><div className="n">{g.last_seen ? new Date(`${g.last_seen}T00:00:00`).toLocaleDateString('en-NZ', { day: 'numeric', month: 'short' }) : 'None'}</div>
+          <div className="s">{g.first_seen ? `first seen ${longDay(g.first_seen)}` : 'not yet named in reporting'}</div></div>
+        <div className="tile"><div className="l">Sources</div><div className="n">{g.sources.length}</div><div className="s">{g.sources.slice(0, 2).join(', ') || 'none yet'}</div></div>
+      </div>
+
+      <div className="doc-grid mt-4">
+        <div className="doc-main">
+          <GroupTrendChart g={g} days={days} onDays={setDays} />
+
+          <section aria-labelledby="g-rep">
+            <div className="section-head"><h2 id="g-rep">Reports naming {g.name}</h2><span className="xsmall muted">Newest first</span></div>
+            {counted.length === 0 ? <Empty title="No reports yet">Threat Watch adds reports here as soon as a collected story names {g.name}{g.aliases.length ? ` or ${g.aliases[0]}` : ''}.</Empty>
+              : <div className="alist">{counted.map((a) => <ArticleCard key={a.id} a={a} />)}</div>}
+            {roundups.length > 0 && (
+              <details className="disclose mt-3">
+                <summary>{roundups.length} roundup and podcast mention{roundups.length === 1 ? '' : 's'} (not counted)</summary>
+                <div className="alist">{roundups.map((a) => <ArticleCard key={a.id} a={a} />)}</div>
+              </details>
+            )}
+          </section>
+        </div>
+
+        <aside className="doc-aside" aria-label="Related">
+          <section className="panel" aria-labelledby="g-rel">
+            <header><h2 id="g-rel">Reported alongside</h2><span className="xsmall muted">Shared stories</span></header>
+            <div className="body">
+              {related.length === 0 ? <p className="small muted mb-0">Nothing yet. This fills in as more reporting names {g.name}.</p>
+                : related.map(([k, label]) => (
+                  <div key={k}>
+                    <h3 className="mini-h">{label}</h3>
+                    <RankBars showPrev={false} unit="shared stories"
+                      rows={g.related[k].map((r) => ({ key: r.type + r.value, name: r.value, sub: r.name ?? undefined, value: r.stories, href: relatedHref(r.type, r.value) }))} />
+                  </div>
+                ))}
+              <p className="xsmall faint mt-3 mb-0">Named in the same stories, roundups excluded. Co-occurrence is not attribution.</p>
+            </div>
+          </section>
+          {g.sources.length > 0 && (
+            <section className="panel" aria-labelledby="g-src">
+              <header><h2 id="g-src">Sources reporting</h2></header>
+              <div className="body"><ul className="reflist">{g.sources.map((s) => <li key={s}>{s}</li>)}</ul></div>
+            </section>
+          )}
+        </aside>
+      </div>
+    </div>
+  )
+}

@@ -24,5 +24,9 @@ export const KEV: Series[] = [{ key: 'count', label: 'KEV additions', color: 'va
 export const day = (iso: string) => new Date(`${iso}T00:00:00`).toLocaleDateString('en-NZ', { day: 'numeric', month: 'short' })
 export const longDay = (iso: string) => new Date(`${iso}T00:00:00`).toLocaleDateString('en-NZ', { day: 'numeric', month: 'short', year: 'numeric' })
 export const pct = (n: number, d: number) => (d ? Math.round((100 * n) / d) : 0)
-export const href = (e: Ent) => (e.tag ? `/latest?tag=${encodeURIComponent(e.tag)}` : `/search?q=${encodeURIComponent(e.query ?? e.name)}`)
+export const GROUP_KINDS = ['actor', 'ransomware', 'malware'] as const
+export const isGroupKind = (k: string): k is (typeof GROUP_KINDS)[number] => (GROUP_KINDS as readonly string[]).includes(k)
+export const groupPath = (kind: string, name: string) => `/group/${kind}/${encodeURIComponent(name)}`
+/** Where a subject links: threat groups and malware to their profile, topics to the feed, anything else to search. */
+export const href = (e: Ent) => (e.tag ? `/latest?tag=${encodeURIComponent(e.tag)}` : isGroupKind(e.type) ? groupPath(e.type, e.name) : `/search?q=${encodeURIComponent(e.query ?? e.name)}`)
 

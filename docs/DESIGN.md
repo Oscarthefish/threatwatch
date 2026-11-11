@@ -159,3 +159,12 @@ characters, which the client turns into elements; nothing is parsed as HTML.
   "Show as a table" view under every chart. 0 axe violations at 390 / 768 / 1440 px in both themes.
 - **Today panel:** "Trends, last 30 days" in Today's right column (stories per day by severity, the five biggest movers,
   the three most active groups) shares the `/trends` query cache and loads independently of the rest of Today.
+
+## Threat group profiles
+`/group/<actor|ransomware|malware>/<name>` (`pages/Group.tsx`, data from `GET /api/groups/{kind}/{name}?days=90|180|365`).
+Names and aliases resolve to the dictionary's canonical group (Secret Blizzard opens Turla); unknown names get a page
+that says so and offers a search. Each profile has: weekly reporting chart by severity (same chart rules as Trends,
+pre-collection weeks shaded, table view), headline figures (stories vs the period before, share of all stories, last
+reported, sources), subjects most often reported alongside it (with a note that co-occurrence is not attribution),
+reports naming it (roundups listed separately and not counted), and Follow. Group and malware names on Trends,
+Today and article entity lists link here, and followed actor/malware items show the same chart under their record.

@@ -7,6 +7,7 @@ import {
   ActionList, ArticleRow, BackLink, BookmarkButton, Confidence, copy, DateFlag, ErrorBox, Eyebrow, fmtDate, Loading, Severity, usePageTitle, useToast,
 } from '../components/ui'
 import { FollowSheet } from '../components/FollowSheet'
+import { groupPath, isGroupKind } from '../components/trendsData'
 import { IconCopy, IconExternal, IconEye } from '../components/icons'
 
 const ENTITY_LABELS: Record<string, string> = {
@@ -230,7 +231,11 @@ export default function ArticlePage() {
                 {ents.map(([t, list]) => (
                   <div key={t}>
                     <div className="field-label">{ENTITY_LABELS[t] ?? t}</div>
-                    <div className="chips">{list.map((e) => (
+                    <div className="chips">{list.map((e) => isGroupKind(t) ? (
+                      <Link key={e.value} className="chip link-chip" to={groupPath(t, e.value)}>
+                        {e.value}{e.method === 'ai' && <span className="ai-mark" aria-label="extracted by AI, verified in the source text">AI</span>}
+                      </Link>
+                    ) : (
                       <span key={e.value} className="chip">
                         {e.value}{e.name ? ` ${e.name}` : ''}
                         {e.method === 'ai' && <span className="ai-mark" aria-label="extracted by AI, verified in the source text">AI</span>}

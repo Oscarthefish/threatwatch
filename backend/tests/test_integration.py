@@ -416,3 +416,31 @@ def test_trends_counts_stories_and_flags_backlog(client, conn):
     assert t["comparison_indicative"] is True                # earlier period predates collection
     assert any(v["partial"] for v in t["volume"]) is True
     assert {x["name"] for x in t["topics"]} >= {"Ransomware"}
+
+
+def test_group_profile_resolves_aliases_and_skips_roundups(client, conn):
+    from datetime import timedelta
+
+    from app.db import iso, utcnow
+    from app.ingest import pipeline
+
+    pipeline.sync_sources(conn)
+    src = conn.execute("SELECT id FROM sources LIMIT 1").fetchone()[0]
+    now = utcnow()
+    conn.execute("INSERT INTO entities(type, value, normalized) VALUES('actor', 'Turla', 'turla')")
+    ent = conn.execute("SELECT id FROM entities WHERE type='actor' AND value='Turla'").fetchone()[0]
+    for i, (title, tags, sev) in enumerate([("Example: Turla targets embassies", '[]', 3), ("Example weekly roundup", '["roundup"]', 1)]):
+        conn.execute(
+            """INSERT INTO articles(source_id, url, canonical_url, title, published_at, retrieved_at, sections, tags, severity, confidence, score)
+               VALUES(?,?,?,?,?,?,'[]',?,?,'single-source',1)""",
+            (src, f"https://example.com/g{i}", f"https://example.com/g{i}", title, iso(now - timedelta(days=2)), iso(now), tags, sev))
+        aid = conn.execute("SELECT id FROM articles WHERE url=?", (f"https://example.com/g{i}",)).fetchone()[0]
+        conn.execute("INSERT INTO article_entities(article_id, entity_id, method) VALUES(?,?,'dictionary')", (aid, ent))
+    conn.commit()
+    login(client)
+    g = client.get("/api/groups/actor/Secret%20Blizzard").json()   # an alias resolves to the canonical group
+    assert g["name"] == "Turla" and "Secret Blizzard" in g["aliases"]
+    assert g["stories"] == 1 and g["roundups"] == 1               # the roundup is listed, not counted
+    assert sum(w["high"] for w in g["weekly"]) == 1
+    assert client.get("/api/groups/actor/Not%20A%20Real%20Group").status_code == 404
+    assert client.get("/api/groups/vendor/Example").status_code == 404

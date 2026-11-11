@@ -7,6 +7,7 @@ import {
   ActionList, ArticleCard, BackLink, CitedText, Cites, copy, Empty, ErrorBox, Eyebrow, Field, fmtDate, Highlight, Loading, TimeAgo, usePageTitle, useToast,
 } from '../components/ui'
 import { IconCopy, IconRefresh } from '../components/icons'
+import { WatchGroupTrend } from '../components/GroupTrend'
 import { useConfirm } from '../components/Sheet'
 import { humanReason, kindLabel, matchStrength, NOTIFY, SIGNIFICANCE, splitList } from '../components/follow'
 
@@ -182,6 +183,7 @@ export default function WatchPage() {
           <div className="doc-grid">
             <div className="doc-main">
               {w.record ? <RecordView r={w.record} /> : <Empty title="No record yet">The record is built as soon as a report is linked.</Empty>}
+              {(w.kind === 'actor' || w.kind === 'malware') && <WatchGroupTrend kind={w.kind} names={[...w.identifiers, ...w.aliases]} />}
               {w.versions.length > 1 && (
                 <details className="disclose panel versions">
                   <summary>Earlier versions ({w.versions.length - 1})</summary>
