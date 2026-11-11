@@ -7,7 +7,7 @@ from ..db import jloads
 from ..intel.classify import SEVERITY_LABELS
 
 ARTICLE_LIST_COLS = """a.id, a.url, a.title, a.summary_text, a.published_at, a.retrieved_at, a.sections, a.tags, a.severity,
-    a.severity_reasons, a.confidence, a.score, a.region, a.cluster_id, s.name AS source_name, s.key AS source_key,
+    a.severity_reasons, a.actions, a.confidence, a.score, a.region, a.cluster_id, s.name AS source_name, s.key AS source_key,
     (SELECT COUNT(*) FROM articles c WHERE c.cluster_id = a.cluster_id AND c.id <> a.id) AS related_count,
     EXISTS(SELECT 1 FROM bookmarks b WHERE b.article_id=a.id) AS bookmarked,
     EXISTS(SELECT 1 FROM reading_history h WHERE h.article_id=a.id) AS is_read,
@@ -31,6 +31,7 @@ def article_brief(r: sqlite3.Row | dict) -> dict:
         "severity": d["severity"],
         "severity_label": SEVERITY_LABELS[d["severity"]],
         "severity_reasons": jloads(d["severity_reasons"]),
+        "actions": jloads(d.get("actions")),
         "confidence": d["confidence"],
         "region": d["region"],
         "related_count": d.get("related_count", 0),

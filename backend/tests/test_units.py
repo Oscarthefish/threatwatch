@@ -122,3 +122,22 @@ def test_briefing_excerpt_drops_publisher_truncation():
         "First sentence about the flaw is here and it is long enough."
     assert _excerpt("Complete short summary") == "Complete short summary."
     assert "appeared first" not in _excerpt("Story text. The post Story appeared first on Example.")
+
+
+def test_soc_actions_from_evidence():
+    from app.intel import actions
+    kev = {"cve_id": "CVE-2099-0001", "kev": 1, "vendor": "Exampleware", "product": "VPN", "kev_required_action": "Apply mitigations per vendor instructions.",
+           "kev_due_date": "2099-01-21", "kev_ransomware": "Known", "cvss_score": None, "epss": None}
+    out = actions.derive("Exampleware VPN flaw exploited", "actively exploited; IOC 203.0.113.9", 4, ["vulnerability", "exploited", "ransomware"],
+                         {"ipv4": ["198.51.100.7"], "attack_technique": ["T1190"]}, [kev])
+    kinds = [a["kind"] for a in out]
+    assert kinds[0] == "patch" and out[0]["basis"] == "CISA KEV" and "2099-01-21" in out[0]["detail"] and "ransomware" in out[0]["detail"]
+    assert {"exposure", "hunt", "detect", "ransomware"} <= set(kinds)
+    hunt = next(a for a in out if a["kind"] == "hunt")
+    assert hunt["basis"] == "Source indicators" and hunt["urgent"]
+    assert all(a["basis"] for a in out)
+
+
+def test_soc_actions_none_for_plain_news():
+    from app.intel import actions
+    assert actions.derive("Company appoints new CISO", "Leadership news.", 1, [], {}, []) == []

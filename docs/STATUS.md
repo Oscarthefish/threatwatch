@@ -21,6 +21,8 @@ _Last updated 2026-11-09._
 - ✅ Full-text search and filters (section, topic tag, region, severity, time, sort)
 - ✅ Vulnerabilities: KEV, EPSS, CVSS, affected products, references, linked reporting
 
+- ✅ SecOps next steps (“What to do”) on articles, briefing items and followed threats, each with its evidence basis
+
 ## Phase 3 — Threat Watch
 - ✅ Follow incidents, vulnerabilities, actors, malware, campaigns, products, topics (from an article, a CVE page, or manually)
 - ✅ Matching via identifiers, aliases (auto-expanded for known actors/malware), context terms, exclusions, contextual similarity; incidents never merged on shared actor/malware alone (tested)

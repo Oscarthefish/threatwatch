@@ -3,7 +3,7 @@ import { Link, useParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from '../api'
 import type { ArticleDetail } from '../types'
-import { ArticleList, BackLink, Eyebrow, usePageTitle, BookmarkButton, Confidence, copy, ErrorBox, fmtDate, Loading, Severity, useToast } from '../components/ui'
+import { ActionList, ArticleList, BackLink, Eyebrow, usePageTitle, BookmarkButton, Confidence, copy, ErrorBox, fmtDate, Loading, Severity, useToast } from '../components/ui'
 import { FollowSheet } from '../components/FollowSheet'
 import { IconCopy, IconExternal, IconEye } from '../components/icons'
 
@@ -76,9 +76,11 @@ export default function ArticlePage() {
         </>}
       </section>
 
+      <ActionList actions={a.actions} ai={a.ai?.soc_actions} />
+
       <section className="card">
         <h2>Source text <span className="small faint">(as published by {a.source.name}; untrusted)</span></h2>
-        {sourceText ? <div className="source-text">{sourceText}</div> : <p className="muted">The feed provided no text. Open the original article.</p>}
+        {sourceText ? <div className="source-text" tabIndex={0} role="region" aria-label={`Source text from ${a.source.name}`}>{sourceText}</div> : <p className="muted">The feed provided no text. Open the original article.</p>}
       </section>
 
       {a.vulnerabilities.length > 0 && (

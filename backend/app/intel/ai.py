@@ -195,12 +195,22 @@ def structured(
 ARTICLE_SCHEMA = {
     "type": "object",
     "additionalProperties": False,
-    "required": ["summary", "why_it_matters", "technical", "entities", "exploitation_status"],
+    "required": ["summary", "why_it_matters", "technical", "entities", "exploitation_status", "soc_actions"],
     "properties": {
         "summary": {"type": "string", "description": "2-3 sentence factual summary"},
         "why_it_matters": {"type": "string", "description": "1-2 sentences for a SOC analyst"},
         "technical": {"type": "string", "description": "SOC-oriented technical notes: TTPs, affected versions, detection or mitigation ideas stated or directly implied by the source. Empty if none."},
         "exploitation_status": {"type": "string", "enum": ["confirmed", "reported", "poc_public", "none_reported", "not_applicable"]},
+        "soc_actions": {
+            "type": "array",
+            "description": "Up to 4 concrete steps a SOC should take, each justified by something stated in the source (patch/mitigation, detection idea, hunt query idea, exposure check). Empty if the source gives no basis.",
+            "items": {
+                "type": "object",
+                "additionalProperties": False,
+                "required": ["action", "rationale"],
+                "properties": {"action": {"type": "string"}, "rationale": {"type": "string", "description": "What in the source supports this"}},
+            },
+        },
         "entities": {
             "type": "array",
             "items": {

@@ -10,6 +10,7 @@ from urllib.parse import quote
 
 from ..config import get_settings
 from ..db import iso, jdumps, jloads, now_iso, parse_iso, tx, utcnow
+from ..intel import actions as soc_actions
 from ..intel import ai, classify, dedupe, entities
 from .fetcher import FetchError, fetch
 from .sources import ADAPTERS, DEFAULT_SOURCES, SEVERITY_CAPS, NcscNzAdapter, RawItem, parse_kev
@@ -141,11 +142,45 @@ def process_article(conn: sqlite3.Connection, article_id: int) -> None:
         c.severity = cap
         c.reasons.append("Severity capped for this source type (release notes / podcast)")
         c.sections = [x for x in c.sections if x != "breaking"]
+    acts = soc_actions.derive(a["title"], body, c.severity, [*c.tags, *c.sections], _display_entities(conn, article_id), vfacts)
     conn.execute(
-        "UPDATE articles SET sections=?, tags=?, severity=?, severity_reasons=?, region=?, extracted_at=? WHERE id=?",
-        (jdumps(c.sections), jdumps(c.tags), c.severity, jdumps(c.reasons), c.region, now_iso(), article_id),
+        "UPDATE articles SET sections=?, tags=?, severity=?, severity_reasons=?, region=?, actions=?, extracted_at=? WHERE id=?",
+        (jdumps(c.sections), jdumps(c.tags), c.severity, jdumps(c.reasons), c.region, jdumps(acts), now_iso(), article_id),
     )
     assign_cluster(conn, article_id)
+
+
+def _display_entities(conn, article_id: int) -> dict[str, list[str]]:
+    out: dict[str, list[str]] = {}
+    for r in conn.execute(
+        "SELECT e.type, e.value FROM article_entities ae JOIN entities e ON e.id=ae.entity_id WHERE ae.article_id=? ORDER BY ae.in_title DESC, e.value",
+        (article_id,),
+    ):
+        out.setdefault(r[0], []).append(r[1])
+    return out
+
+
+ACTIONS_VERSION = 3
+
+
+def backfill_actions(conn: sqlite3.Connection) -> int:
+    """One-off recomputation of SecOps actions for stored articles when the rules version changes."""
+    from ..db import get_setting, set_setting
+
+    if get_setting(conn, "actions_version", 0) >= ACTIONS_VERSION:
+        return 0
+    ids = [r[0] for r in conn.execute("SELECT id FROM articles")]
+    for aid in ids:
+        a = conn.execute("SELECT title, summary_text, content_text, severity, tags, sections FROM articles WHERE id=?", (aid,)).fetchone()
+        ets = article_entities(conn, aid)
+        cves = sorted(v.upper() for v in ets.get("cve", set()))
+        vf = [dict(r) for r in conn.execute(
+            f"SELECT * FROM vulnerabilities WHERE cve_id IN ({','.join('?' * len(cves))})", cves)] if cves else []
+        acts = soc_actions.derive(a["title"], f"{a['summary_text']}\n{a['content_text']}", a["severity"],
+                                  [*jloads(a["tags"]), *jloads(a["sections"])], _display_entities(conn, aid), vf)
+        conn.execute("UPDATE articles SET actions=? WHERE id=?", (jdumps(acts), aid))
+    set_setting(conn, "actions_version", ACTIONS_VERSION)
+    return len(ids)
 
 
 def assign_cluster(conn: sqlite3.Connection, article_id: int) -> None:

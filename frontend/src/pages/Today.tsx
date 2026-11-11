@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { api, qs } from '../api'
 import type { BriefingItem, Today as TodayT } from '../types'
-import { ArticleRow, Empty, ErrorBox, Eyebrow, fmtDate, Loading, Severity, TimeAgo, usePageTitle } from '../components/ui'
+import { ActionTags, ArticleRow, Empty, ErrorBox, Eyebrow, fmtDate, Loading, Severity, TimeAgo, usePageTitle } from '../components/ui'
 import { IconRefresh } from '../components/icons'
 
 const KEY = 'tw-visit-baseline'
@@ -37,7 +37,14 @@ function BriefItem({ it, n, open, onToggle }: { it: BriefingItem; n: number; ope
           {(it.sources?.length ?? 0) > 4 && <span className="faint">+{(it.sources?.length ?? 0) - 4}</span>}
           {lead && <span className="faint"><TimeAgo iso={lead.published_at} /></span>}
         </div>
+        {!open && <ActionTags actions={lead?.actions} />}
         {open && it.why_it_matters && <p className="why"><strong>Why it matters: </strong>{it.why_it_matters}</p>}
+        {open && (lead?.actions?.length ?? 0) > 0 && (
+          <div className="todo-inline">
+            <div className="xsmall strong muted">What to do</div>
+            <ul>{lead!.actions.map((a) => <li key={a.kind + a.label}><strong>{a.label}.</strong> {a.detail} <span className="basis">{a.basis}</span></li>)}</ul>
+          </div>
+        )}
       </div>
     </div>
   )

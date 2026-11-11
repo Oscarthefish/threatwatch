@@ -2,7 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useId, useRef, useSt
 import { Link, useNavigate } from 'react-router-dom'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { api, ApiError } from '../api'
-import type { ArticleBrief } from '../types'
+import type { ArticleBrief, SocAction } from '../types'
 import { IconBack, IconBookmark, IconExternal } from './icons'
 
 // ------------------------------------------------------------------ time
@@ -136,6 +136,49 @@ export function BookmarkButton({ id, on, withLabel, compact }: { id: number; on:
   )
 }
 
+// ------------------------------------------------------------ SecOps actions
+/** Compact next-step tags for cards and rows. Urgent steps are marked in text, not only colour. */
+export function ActionTags({ actions, max = 3 }: { actions?: SocAction[]; max?: number }) {
+  if (!actions?.length) return null
+  const shown = actions.slice(0, max)
+  return (
+    <ul className="acts" aria-label="Next steps for the SOC">
+      {shown.map((a) => <li key={a.kind + a.label} className={`act ${a.urgent ? 'urgent' : ''}`}>{a.urgent && <span className="sr-only">Urgent: </span>}{a.label}</li>)}
+      {actions.length > max && <li className="act more">+{actions.length - max}</li>}
+    </ul>
+  )
+}
+
+/** Full next-step guidance with the basis of each step. */
+export function ActionList({ actions, ai }: { actions: SocAction[]; ai?: { action: string; rationale: string }[] }) {
+  if (!actions.length && !ai?.length) return null
+  return (
+    <section className="panel" aria-labelledby="todo-h">
+      <header><h2 id="todo-h">What to do</h2><span className="xsmall muted">Next steps for the SOC</span></header>
+      <div className="body">
+        <ol className="todo">
+          {actions.map((a) => (
+            <li key={a.kind + a.label} className={a.urgent ? 'urgent' : ''}>
+              <div className="row between top">
+                <strong>{a.label}{a.urgent && <span className="tag-urgent">Urgent</span>}</strong>
+                <span className={`basis ${a.basis === 'Playbook' ? 'playbook' : ''}`}>{a.basis}</span>
+              </div>
+              <p>{a.detail}</p>
+            </li>
+          ))}
+          {ai?.map((a, i) => (
+            <li key={`ai${i}`}>
+              <div className="row between top"><strong>{a.action}</strong><span className="basis">AI, from source</span></div>
+              <p>{a.rationale}</p>
+            </li>
+          ))}
+        </ol>
+        <p className="xsmall faint mb-0">“Playbook” steps are standard practice for this type of threat, not claims about this incident. Other steps come directly from the named source.</p>
+      </div>
+    </section>
+  )
+}
+
 // ------------------------------------------------------------ article card
 export function ArticleCard({ a, extra }: { a: ArticleBrief; extra?: ReactNode }) {
   return (
@@ -154,6 +197,7 @@ export function ArticleCard({ a, extra }: { a: ArticleBrief; extra?: ReactNode }
       </div>
       <Link className="title" to={`/article/${a.id}`}>{a.title}</Link>
       {(a.ai_summary || a.excerpt) && <p className="excerpt">{a.ai_summary ?? a.excerpt}</p>}
+      <ActionTags actions={a.actions} />
       {extra}
     </article>
   )
@@ -168,6 +212,7 @@ export function ArticleRow({ a }: { a: ArticleBrief }) {
       <div className="grow">
         <Link className="t" to={`/article/${a.id}`}>{a.title}</Link>
         <div className="m">{a.source.name} · <TimeAgo iso={a.published_at} />{a.related_count > 0 && <> · +{a.related_count} source{a.related_count > 1 ? 's' : ''}</>}{a.region && a.region !== 'GLOBAL' && <> · {a.region}</>}</div>
+        <ActionTags actions={a.actions} max={2} />
       </div>
       <BookmarkButton id={a.id} on={a.bookmarked} compact />
     </div>

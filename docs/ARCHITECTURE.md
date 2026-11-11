@@ -70,6 +70,26 @@ Every 30 minutes (per-source intervals respected, failing sources back off expon
 6. Optional AI summaries for the top-ranked new cluster representatives.
 7. Match new articles against active watches.
 
+## SecOps next steps
+
+`intel/actions.py` derives up to six “What to do” steps per article when it is processed (stored in `articles.actions`,
+recomputed when KEV status changes, and backfilled when the rules version changes). Each step states its basis:
+
+| Step | Trigger | Basis |
+|---|---|---|
+| Patch now | CVE listed in CISA KEV | CISA KEV required action + federal deadline + ransomware use |
+| Prioritise patching | CVSS ≥ 9, EPSS ≥ 10 %, or reported exploitation | CVE record / EPSS |
+| Apply vendor update | exploitation reported but no CVE in the text | Source (reported exploitation) |
+| Check exposure | vulnerability / exploitation story naming products | Playbook |
+| Hunt for indicators | IOCs extracted from the source | Source indicators |
+| Check detections / Review detection content | ATT&CK IDs named, or detection material in the source | Source ATT&CK / Source |
+| Ransomware readiness, Identity and users, Check dependencies, Track actor | threat type | Playbook |
+
+Roundups and podcasts get no steps (they mix unrelated stories). “Playbook” steps are labelled in the UI as
+general practice, not claims about the incident. With an AI key, the article summary may add grounded
+steps (`soc_actions`, each with the source rationale), labelled “AI, from source”. Following pages aggregate
+the steps from all linked evidence.
+
 ## Threat Watch matching
 
 Each watch has **identifiers** (strong identity: CVE, victim org, incident name), **aliases**, **context terms**, **exclude terms**, and a token profile built from its title, description and linked evidence.

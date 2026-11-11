@@ -2,8 +2,8 @@ import { useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from '../api'
-import type { ArticleBrief, Claim, WatchDetail, WatchRecord } from '../types'
-import { ArticleCard, BackLink, CitedText, Cites, copy, Empty, ErrorBox, Eyebrow, fmtDate, Loading, TimeAgo, usePageTitle, useToast } from '../components/ui'
+import type { ArticleBrief, Claim, SocAction, WatchDetail, WatchRecord } from '../types'
+import { ActionList, ArticleCard, BackLink, CitedText, Cites, copy, Empty, ErrorBox, Eyebrow, fmtDate, Loading, TimeAgo, usePageTitle, useToast } from '../components/ui'
 import { IconCopy, IconRefresh } from '../components/icons'
 import { useConfirm } from '../components/Sheet'
 
@@ -88,7 +88,10 @@ export default function WatchPage() {
           <button key={t} role="tab" aria-selected={tab === t} className={tab === t ? 'active' : ''} onClick={() => setTab(t)}>{l}{t === 'evidence' && w.candidates.length > 0 && <span className="badge" style={{ marginLeft: 4 }}>{w.candidates.length}</span>}</button>))}
       </div>
 
-      {tab === 'overview' && (w.record ? <RecordView r={w.record} /> : <Empty title="No record yet" />)}
+      {tab === 'overview' && <div className="stack">
+        <ActionList actions={nextSteps(w.evidence)} />
+        {w.record ? <RecordView r={w.record} /> : <Empty title="No record yet" />}
+      </div>}
 
       {tab === 'timeline' && (
         <ol className="timeline">{w.timeline.map((t) => (
@@ -133,6 +136,19 @@ export default function WatchPage() {
       {tab === 'matching' && <MatchingForm w={w} onSave={(b) => patch.mutate(b)} onDelete={async () => { if (await confirm({ title: 'Stop following and delete?', body: `This permanently deletes “${w.title}”, its timeline and all record versions. Linked articles are kept.`, confirmLabel: 'Delete watch', danger: true })) del.mutate() }} />}
     </>
   )
+}
+
+/** Next steps across all linked evidence, newest first, de-duplicated; urgent steps lead. */
+function nextSteps(evidence: ArticleBrief[]): SocAction[] {
+  const seen = new Set<string>()
+  const out: SocAction[] = []
+  for (const a of [...evidence].sort((x, y) => y.published_at.localeCompare(x.published_at))) {
+    for (const s of a.actions ?? []) {
+      const key = s.kind === 'patch' || s.basis === 'Playbook' ? s.kind + s.label : s.kind + s.detail
+      if (!seen.has(key)) { seen.add(key); out.push(s) }
+    }
+  }
+  return out.sort((x, y) => Number(y.urgent) - Number(x.urgent)).slice(0, 8)
 }
 
 const split = (s: string) => s.split(',').map((x) => x.trim()).filter(Boolean)

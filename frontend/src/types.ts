@@ -1,5 +1,8 @@
 export type Severity = 'info' | 'low' | 'medium' | 'high' | 'critical'
 
+/** SecOps next step derived from evidence; `basis` says where it comes from ("Playbook" = general guidance). */
+export interface SocAction { kind: string; label: string; detail: string; basis: string; urgent: boolean }
+
 export interface ArticleBrief {
   id: number
   url: string
@@ -14,6 +17,7 @@ export interface ArticleBrief {
   severity: number
   severity_label: Severity
   severity_reasons: string[]
+  actions: SocAction[]
   confidence: string
   region: string | null
   related_count: number
@@ -71,7 +75,7 @@ export interface ArticleDetail extends ArticleBrief {
   entities: Record<string, EntityItem[]>
   vulnerabilities: Vuln[]
   related: ArticleBrief[]
-  ai: { summary: string; why_it_matters: string; technical: string; exploitation_status: string; model: string; generated_at: string } | null
+  ai: { summary: string; why_it_matters: string; technical: string; exploitation_status: string; soc_actions?: { action: string; rationale: string }[]; model: string; generated_at: string } | null
   watches: { id: number; title: string; kind: string; status: string; significance: string }[]
   watch_suggestions: WatchSuggestion[]
   ai_available: boolean
