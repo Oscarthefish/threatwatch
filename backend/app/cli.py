@@ -27,6 +27,10 @@ def cmd_set_password(args) -> int:
     if not username:
         print("username required", file=sys.stderr)
         return 2
+    if not sys.stdin.isatty():
+        print("set-password needs an interactive terminal so the password is never echoed or logged.\n"
+              "Run it from a normal Terminal window (e.g. `deploy/local.sh password`).", file=sys.stderr)
+        return 2
     pw = getpass.getpass("New password (min 12 chars): ")
     if pw != getpass.getpass("Repeat password: "):
         print("passwords do not match", file=sys.stderr)
