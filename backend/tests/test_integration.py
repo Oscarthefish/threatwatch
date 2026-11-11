@@ -387,3 +387,32 @@ def test_feeds_hide_kev_announcements_but_search_finds_them(client, conn):
     assert not any("Known Exploited" in t for t in latest)
     found = [a["title"] for a in client.get("/api/articles?q=examplekevword").json()["items"]]
     assert any("Known Exploited" in t for t in found)
+
+
+def test_trends_counts_stories_and_flags_backlog(client, conn):
+    from datetime import timedelta
+
+    from app.db import iso, utcnow
+    from app.ingest import pipeline
+
+    pipeline.sync_sources(conn)
+    src = conn.execute("SELECT id FROM sources LIMIT 1").fetchone()[0]
+    now = utcnow()
+    rows = [("Example ransomware hits retailer", 4, 1, '["ransomware"]'), ("Same story, second outlet", 4, 1, '["ransomware"]'),
+            ("Example weekly roundup", 1, 2, '["roundup"]'), ("Older backlog item", 3, 40, '["phishing"]')]
+    for i, (title, sev, age, tags) in enumerate(rows):
+        conn.execute(
+            """INSERT INTO articles(source_id, url, canonical_url, title, published_at, retrieved_at, sections, tags, severity, confidence, score)
+               VALUES(?,?,?,?,?,?,'[]',?,?,'single-source',1)""",
+            (src, f"https://example.com/t{i}", f"https://example.com/t{i}", title, iso(now - timedelta(days=age)), iso(now), tags, sev))
+    ids = [r[0] for r in conn.execute("SELECT id FROM articles ORDER BY id")]
+    conn.execute("UPDATE articles SET cluster_id=? WHERE id IN (?,?)", (ids[0], ids[0], ids[1]))  # two outlets, one story
+    conn.commit()
+    login(client)
+    t = client.get("/api/trends?days=30").json()
+    assert t["totals"]["current"]["reports"] == 2           # the two-outlet story counts once
+    assert t["totals"]["current"]["critical_high"] == 1
+    assert t["totals"]["previous"]["reports"] == 1
+    assert t["comparison_indicative"] is True                # earlier period predates collection
+    assert any(v["partial"] for v in t["volume"]) is True
+    assert {x["name"] for x in t["topics"]} >= {"Ransomware"}

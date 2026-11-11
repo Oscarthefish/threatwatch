@@ -48,6 +48,8 @@ export const STEPS: Step[] = [
     body: <><strong>Bookmark</strong> saves this one article. <strong>Follow</strong> tracks the subject itself (an incident, CVE, actor or topic): new reporting is matched to it automatically, its record is versioned, and you are told about important changes.</> },
   { section: 'Vulnerabilities', route: '/vulns', target: ['main .vlist .vrow'], title: 'Vulnerabilities',
     body: <>Every tracked CVE, product first. <strong>EPSS</strong> is FIRST's estimated probability of exploitation in the next 30 days. <strong>CVSS</strong> is the severity score from the CVE record. <strong>Exploited (KEV)</strong> marks confirmed exploitation.</> },
+  { section: 'Trends', route: '/trends', target: ['main .trend-tiles', 'main .page-head'], title: 'Trends',
+    body: <>Charts of what the reporting says is most active, rising and falling: threat groups, malware, vendors, topics and CISA KEV additions. Counts are stories, not attacks, and periods before collection began are marked incomplete. Every chart has a table view.</> },
   { section: 'Following', route: '/watch', target: ['main .page-head'], title: 'Following',
     body: <>Everything you follow, with counts of new reporting. Reports that only partly match wait for your review, so nothing is linked on a guess. Each item has an overview, a timeline, its linked reports and its own settings.</> },
   { section: 'Saved', route: '/saved', target: ['main .page-head'], title: 'Saved',

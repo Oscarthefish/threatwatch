@@ -18,6 +18,7 @@ import Saved from './pages/Saved'
 import Search from './pages/Search'
 import Notifications from './pages/Notifications'
 import Settings from './pages/Settings'
+import Trends from './pages/Trends'
 
 type AuthState = 'checking' | 'in' | 'out'
 
@@ -54,6 +55,7 @@ export default function App() {
         <Route path="/latest" element={<Section title="Latest" sub="Everything collected, newest first or by importance"
           tags={[['exploited', 'Exploited'], ['incident', 'Incidents'], ['vulnerability', 'Vulnerabilities'], ['ransomware', 'Ransomware'], ['detection', 'Detection & hunting']]} />} />
         <Route path="/vulns" element={<Vulns />} />
+        <Route path="/trends" element={<Trends />} />
         <Route path="/vuln/:cve" element={<VulnDetail />} />
         <Route path="/article/:id" element={<ArticlePage />} />
         <Route path="/watch" element={<Watches />} />

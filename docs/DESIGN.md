@@ -141,3 +141,19 @@ there is none, so the tour never stalls.
 
 Highlighting uses `<mark>` with full text colour (AA in both themes). The server marks search matches with control
 characters, which the client turns into elements; nothing is parsed as HTML.
+
+## Trends page (charts)
+`/trends` (`pages/Trends.tsx`, charts in `components/charts.tsx`, data from `GET /api/trends?days=30|90`). No chart library.
+
+- **What is counted:** stories (clustered articles count once) by publisher date; group, malware and vendor counts skip
+  roundups. Counts describe reporting, not attacks, and the page says so.
+- **Honesty about coverage:** feeds only expose their newest items, so periods before collection began are flagged
+  `partial`, shaded in the volume chart and drawn faded in sparklines. Rising/falling compares each subject's *share of
+  all stories*, not raw counts, so uneven collection volume does not make everything look like it is rising; while the
+  earlier period is partial the comparison is labelled indicative. CISA KEV figures are complete and labelled so.
+- **Forms:** stacked columns (volume by severity), ranked bars with a previous-period tick and weekly sparkline
+  (groups, malware, vendors, topics, KEV vendors), before/after dumbbells (rising and falling), single-series columns (KEV).
+- **Colour:** severity pair validated with the dataviz palette checks in both themes (light `#c4232b`/`#d17a2a` on
+  white, dark `#d64545`/`#c98500` on `#14171b`); single series use the brand teal; grey is the de-emphasis neutral.
+- **Access:** legends for 2+ series, hover and keyboard tooltips (arrow keys, announced via a live region), and a
+  "Show as a table" view under every chart. 0 axe violations at 390 / 768 / 1440 px in both themes.
