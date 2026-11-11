@@ -149,7 +149,7 @@ export function Layout({ children }: { children: ReactNode }) {
             </>
           )}
         </header>
-        <main className={`content ${loc.pathname === '/' ? 'wide' : ''}`} id="main" tabIndex={-1}>{children}</main>
+        <main className={`content ${loc.pathname === '/' ? 'wide' : loc.pathname.startsWith('/article/') ? 'doc-wide' : ''}`} id="main" tabIndex={-1}>{children}</main>
       </div>
 
       <nav className="bottomnav" aria-label="Main">

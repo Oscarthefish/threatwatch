@@ -28,7 +28,7 @@ function BriefItem({ it, n, open, onToggle }: { it: BriefingItem; n: number; ope
   return (
     <div className="bitem">
       <span className="num">{n}</span>
-      <div style={{ minWidth: 0 }}>
+      <div className="grow">
         <button className="bt" aria-expanded={open} onClick={onToggle}>{it.title}</button>
         {it.summary && <p className="bs">{it.summary}</p>}
         <div className="bm">
@@ -98,11 +98,11 @@ export default function Today() {
       </div>
 
       <div className="tiles">
-        <Tile to="#since" n={st.new_since_visit} label="New for you" sub={d.last_visit_at ? `since ${timeOrDate(d.baseline)}` : 'last 24 hours'} />
+        <Tile to="#since" n={st.new_since_visit} label="New since visit" sub={d.last_visit_at ? `since ${timeOrDate(d.baseline)}` : 'last 24 hours'} />
         <Tile to="/breaking" n={st.critical_24h} label="Critical · 24h" tone="crit" sub={`of ${st.total_24h} stories`} />
         <Tile to="/breaking" n={st.high_24h} label="High · 24h" tone="high" />
         <Tile to="/vulns?kev=1" n={st.kev_7d} label="New KEV · 7d" tone="crit" sub="confirmed exploitation" />
-        <Tile to="/watch" n={st.watch_updates} label="Watch updates" sub={st.review_queue ? `${st.review_queue} to review · ${st.watching} followed` : `${st.watching} followed`} tone={st.review_queue ? 'warn' : ''} />
+        <Tile to="/watch" n={st.watch_updates} label="Following" sub={`with new reporting${st.review_queue ? ` · ${st.review_queue} to review` : ''}`} tone={st.review_queue ? 'warn' : ''} />
         <Tile to="/settings" n={`${st.sources_ok}/${st.sources_total}`} label="Sources OK" tone={st.sources_failing.length ? 'warn' : ''}
           sub={st.sources_failing.length ? `failing: ${st.sources_failing.join(', ')}` : 'all collecting'} />
       </div>
@@ -116,8 +116,8 @@ export default function Today() {
             </header>
             <div className="body">
               {!b ? <Empty title="No briefing yet">The first briefing is generated after the initial collection, then daily at 7:00 AM NZ time.</Empty> : <>
-                {b.headline && <p style={{ fontWeight: 600, marginBottom: '.2rem' }}>{b.headline}</p>}
-                <p className="small faint" style={{ marginBottom: '.4rem' }}>
+                {b.headline && <p className="strong mb-0">{b.headline}</p>}
+                <p className="xsmall faint mb-2">
                   {b.date} · {fmtDate(b.generated_at)} · {b.method === 'ai' ? `AI synthesis (${b.model}) — verify against sources` : 'ranked from source reporting; summaries are publishers’ text'}
                 </p>
                 {b.items.map((it, i) => <BriefItem key={i} it={it} n={i + 1} open={open.has(i)}
@@ -128,8 +128,8 @@ export default function Today() {
 
           <section className="panel" id="since" aria-labelledby="since-h">
             <header>
-              <h2 id="since-h">Since your last visit <span className="muted small" style={{ fontWeight: 500 }}>({d.since_last_visit.count})</span></h2>
-              <div className="row" style={{ gap: '.6rem' }}>
+              <h2 id="since-h">Since your last visit <span className="muted small">({d.since_last_visit.count})</span></h2>
+              <div className="row">
                 <div className="seg" role="group" aria-label="Filter">
                   <button className={filter === 'all' ? 'on' : ''} aria-pressed={filter === 'all'} onClick={() => setFilter('all')}>All</button>
                   <button className={filter === 'high' ? 'on' : ''} aria-pressed={filter === 'high'} onClick={() => setFilter('high')}>High+</button>
@@ -140,7 +140,7 @@ export default function Today() {
             <div className="body">
               {since.length === 0 ? <Empty title="You’re up to date">{filter === 'high' ? 'No new high or critical stories.' : 'Nothing new since your last visit.'}</Empty> : <>
                 {shown.map((a) => <ArticleRow key={a.id} a={a} />)}
-                <div className="row between small" style={{ marginTop: '.5rem' }}>
+                <div className="row between small mt-2">
                   {since.length > 8 ? <button className="link" onClick={() => setShowAll(!showAll)}>{showAll ? 'Show fewer' : `Show all ${since.length}`}</button> : <span />}
                   <Link to="/latest">Browse all latest →</Link>
                 </div>
@@ -151,7 +151,7 @@ export default function Today() {
 
         <div>
           <section className="panel" aria-labelledby="watch-h">
-            <header><h2 id="watch-h">Followed threats</h2><Link to="/watch">All</Link></header>
+            <header><h2 id="watch-h">Following</h2><Link to="/watch">All</Link></header>
             <div className="body">
               {d.watch_updates.length > 0 ? d.watch_updates.map((w) => (
                 <Link key={w.id} to={`/watch/${w.id}`} className="kevrow">
@@ -159,7 +159,7 @@ export default function Today() {
                   <span className="p grow">{w.title}</span>
                   <span className="r">{w.important > 0 && <span className="sig important">{w.important} important</span>} {w.new_evidence} new</span>
                 </Link>
-              )) : <p className="small muted" style={{ margin: 0 }}>
+              )) : <p className="small muted mb-0">
                 {st.watching ? `No new developments on your ${st.watching} followed item${st.watching === 1 ? '' : 's'}.` : <>Not following anything yet. Open an article and tap <strong>Follow</strong> to track an incident, CVE or actor.</>}
                 {st.review_queue > 0 && <> <Link to="/watch">{st.review_queue} item{st.review_queue === 1 ? '' : 's'} awaiting review.</Link></>}
               </p>}
@@ -169,11 +169,11 @@ export default function Today() {
           <section className="panel" aria-labelledby="kev-h">
             <header><h2 id="kev-h">New in CISA KEV</h2><Link to="/vulns?kev=1">All KEV</Link></header>
             <div className="body">
-              {d.kev_new.length === 0 ? <p className="small muted" style={{ margin: 0 }}>No additions in the last 7 days.</p> : d.kev_new.map((v) => (
+              {d.kev_new.length === 0 ? <p className="small muted mb-0">No additions in the last 7 days.</p> : d.kev_new.map((v) => (
                 <Link key={v.cve_id} to={`/vuln/${v.cve_id}`} className="kevrow">
-                  <div className="grow" style={{ minWidth: 0 }}>
+                  <div className="grow">
                     <div className="p">{[v.vendor, v.product].filter(Boolean).join(' ')}</div>
-                    <code>{v.cve_id}</code>{v.kev_ransomware === 'Known' && <span className="chip kev" style={{ marginLeft: '.35rem' }}>ransomware</span>}
+                    <code>{v.cve_id}</code>{v.kev_ransomware === 'Known' && <span className="chip kev ml-1">ransomware</span>}
                   </div>
                   <div className="r">{v.kev_date_added}<br />{v.epss != null ? `EPSS ${(v.epss * 100).toFixed(1)}%` : ''}{v.cvss_score != null ? ` · ${v.cvss_score}` : ''}</div>
                 </Link>
@@ -184,7 +184,7 @@ export default function Today() {
           <section className="panel" aria-labelledby="apac-h">
             <header><h2 id="apac-h">New Zealand & APAC</h2><Link to="/apac">More</Link></header>
             <div className="body">
-              {d.regional.length === 0 ? <p className="small muted" style={{ margin: 0 }}>No regional reporting in the last 14 days.</p> : d.regional.map((a) => <ArticleRow key={a.id} a={a} />)}
+              {d.regional.length === 0 ? <p className="small muted mb-0">No regional reporting in the last 14 days.</p> : d.regional.map((a) => <ArticleRow key={a.id} a={a} />)}
             </div>
           </section>
 
