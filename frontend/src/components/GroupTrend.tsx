@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { api, ApiError } from '../api'
-import type { ArticleBrief } from '../types'
+import type { ArticleBrief, AttackEntry } from '../types'
 import { ColumnChart, DataTable, type Column } from './charts'
 import { groupPath, isGroupKind, longDay, SEV } from './trendsData'
 import { Loading } from './ui'
@@ -13,8 +13,9 @@ export interface GroupProfile {
   stories: number; previous: number; all_time: number; roundups: number; share: number; previous_share: number | null
   first_seen: string | null; last_seen: string | null; sources: string[]
   weekly: { start: string; end: string; critical: number; high: number; other: number; partial: boolean }[]
-  related: Record<string, { type: string; value: string; stories: number; name: string | null }[]>
+  related: Record<string, { type: string; value: string; stories: number; name: string | null; url?: string | null }[]>
   articles: ArticleBrief[]; watch: { id: number; title: string } | null
+  attack: AttackEntry | null; attack_synced_at: string | null
 }
 
 export { groupPath, isGroupKind }

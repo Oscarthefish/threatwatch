@@ -922,3 +922,6 @@ mark { color: var(--text); font-weight: var(--w-medium); }
 .trends-mini .viz-table summary { min-height: 36px; }
 .rank-val { white-space: nowrap; }
 .trends-mini .dumb li { grid-template-columns: minmax(0, 7.5rem) minmax(0, 1fr) 4.4rem; }
+.reading .mini-h:first-child { margin-top: 0; }
+.reading .reflist li { overflow-wrap: anywhere; }
+.reflist a, .reading a { text-decoration: underline; text-underline-offset: 2px; text-decoration-thickness: 1px; }

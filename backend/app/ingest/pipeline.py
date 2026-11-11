@@ -400,6 +400,11 @@ def run_ingest(conn: sqlite3.Connection, force: bool = False, only: list[str] | 
                 n = ingest_epss(conn, src)
                 _mark(conn, src["id"], True, "ok", items=n)
                 report["sources"][src["key"]] = f"{n} EPSS scores"
+            elif src["kind"] == "attack":
+                from .attack import ingest_attack
+                n, etag, lm = ingest_attack(conn, src)
+                _mark(conn, src["id"], True, "ok" if n else "not-modified", items=n, etag=etag, last_modified=lm)
+                report["sources"][src["key"]] = f"{n} ATT&CK groups and software" if n else "not modified"
             elif src["kind"] == "cve_enrich":
                 n = ingest_cve_enrichment(conn, src)
                 _mark(conn, src["id"], True, "ok", items=n)

@@ -14,9 +14,10 @@ interface Status {
 }
 
 const KIND: Record<string, string> = {
-  rss: 'RSS / Atom feed', ncsc_nz_html: 'Public alerts page', kev: 'CISA KEV catalogue (JSON)', epss: 'FIRST EPSS API', cve_enrich: 'CVE.org API',
+  rss: 'RSS / Atom feed', ncsc_nz_html: 'Public alerts page', kev: 'CISA KEV catalogue (JSON)', epss: 'FIRST EPSS API', cve_enrich: 'CVE.org API', attack: 'MITRE ATT&CK (STIX, GitHub)',
 }
-const DATA_KINDS = new Set(['kev', 'epss', 'cve_enrich'])
+const DATA_KINDS = new Set(['kev', 'epss', 'cve_enrich', 'attack'])
+const every = (m: number) => (m >= 10080 && m % 10080 === 0 ? (m === 10080 ? 'weekly' : `every ${m / 10080} weeks`) : m >= 1440 && m % 1440 === 0 ? (m === 1440 ? 'daily' : `every ${m / 1440} days`) : m >= 60 && m % 60 === 0 ? `every ${m / 60} h` : `every ${m} min`)
 
 function b64ToUint8(b64: string) {
   const pad = '='.repeat((4 - (b64.length % 4)) % 4)
@@ -38,7 +39,7 @@ function SourceRow({ x, onToggle }: { x: Source; onToggle: () => void }) {
             <span aria-hidden="true" />
           </label>
         </div>
-        <div className="xsmall muted">{KIND[x.kind] ?? x.kind} · every {x.interval_minutes} min{x.region !== 'GLOBAL' ? ` · ${x.region}` : ''}</div>
+        <div className="xsmall muted">{KIND[x.kind] ?? x.kind} · {every(x.interval_minutes)}{x.region !== 'GLOBAL' ? ` · ${x.region}` : ''}</div>
         <div className="row xsmall mt-2">
           <span className={`spill ${state}`}><i aria-hidden="true" />{label}</span>
           {x.last_success_at && <span className="muted">last success <TimeAgo iso={x.last_success_at} /></span>}
@@ -118,12 +119,12 @@ export default function Settings({ onLogout }: { onLogout: () => void }) {
           </section>
 
           <section className="panel" aria-labelledby="src-h">
-            <header><h2 id="src-h">Sources</h2><span className="xsmall muted">{feeds.length} reporting · {data.length} vulnerability data</span></header>
+            <header><h2 id="src-h">Sources</h2><span className="xsmall muted">{feeds.length} reporting · {data.length} reference data</span></header>
             <div className="body">
               {src.isError ? <ErrorBox error={src.error} onRetry={() => src.refetch()} /> : !src.data ? <Loading lines={6} /> : <>
                 <h3 className="day-head">Reporting</h3>
                 <ul className="slist">{feeds.map((x) => <SourceRow key={x.id} x={x} onToggle={() => toggle.mutate(x)} />)}</ul>
-                <h3 className="day-head">Vulnerability data</h3>
+                <h3 className="day-head">Reference data</h3>
                 <ul className="slist">{data.map((x) => <SourceRow key={x.id} x={x} onToggle={() => toggle.mutate(x)} />)}</ul>
                 <p className="xsmall muted mt-3 mb-0">Retrieved only through published feeds and APIs. NCSC NZ has no feed, so its public alerts page is read once an hour.</p>
               </>}

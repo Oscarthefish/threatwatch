@@ -207,6 +207,8 @@ def article_detail(article_id: int, conn: sqlite3.Connection = Depends(get_db)):
     cves = [e["value"].upper() for e in ents if e["type"] == "cve"]
     art["vulnerabilities"] = [vuln_dict(r) for r in conn.execute(
         f"SELECT * FROM vulnerabilities WHERE cve_id IN ({','.join('?' * len(cves))})", cves)] if cves else []
+    from ..intel import reading
+    art["further_reading"] = reading.for_article(conn, ents, art["vulnerabilities"], art["url"])
     art["related"] = _list_articles(conn, ids=[r[0] for r in conn.execute(
         "SELECT id FROM articles WHERE cluster_id=? AND id<>? ORDER BY published_at", (full["cluster_id"], article_id))], collapse=False)
     aio = conn.execute(

@@ -77,6 +77,7 @@ export interface ArticleDetail extends ArticleBrief {
   entities: Record<string, EntityItem[]>
   vulnerabilities: Vuln[]
   related: ArticleBrief[]
+  further_reading?: ReadingSection[]
   ai: { summary: string; why_it_matters: string; technical: string; exploitation_status: string; soc_actions?: { action: string; rationale: string }[]; model: string; generated_at: string } | null
   watches: { id: number; title: string; kind: string; status: string; significance: string }[]
   watch_suggestions: WatchSuggestion[]
@@ -186,4 +187,10 @@ export interface Source {
   id: number; key: string; name: string; kind: string; url: string; homepage: string; enabled: boolean; interval_minutes: number
   authority: number; region: string; last_fetched_at: string | null; last_success_at: string | null; last_status: string | null
   last_error: string | null; items_last_run: number; consecutive_failures: number; article_count: number; latest_article: string | null
+}
+
+export interface ReadingSection { section: string; items: { title: string; url: string; note: string | null }[]; note?: string }
+export interface AttackEntry {
+  attack_id: string; name: string; kind: 'group' | 'software'; url: string; aliases: string[]; description: string
+  modified: string | null; synced_at: string; refs: { source: string; url: string; description: string }[]; ref_count: number
 }

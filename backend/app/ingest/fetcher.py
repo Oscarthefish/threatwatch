@@ -13,6 +13,8 @@ added by the authenticated owner, which keeps this acceptable for a single-user 
 """
 from __future__ import annotations
 
+from typing import BinaryIO
+
 import ipaddress
 import logging
 import socket
@@ -130,7 +132,9 @@ def fetch(
     retries: int = 2,
     client: httpx.Client | None = None,
     resolve: bool = True,
+    sink: BinaryIO | None = None,
 ) -> FetchResult:
+    """Fetch a public URL. With ``sink`` the body is streamed to that file instead of held in memory."""
     s = get_settings()
     cap = max_bytes or s.http_max_bytes
     headers = {"User-Agent": s.user_agent, "Accept": accept, "Accept-Encoding": "gzip, deflate"}
@@ -145,7 +149,10 @@ def fetch(
         attempt = 0
         while True:
             try:
-                return _fetch_once(c, url, headers, cap, resolve)
+                if sink is not None:
+                    sink.seek(0)
+                    sink.truncate()
+                return _fetch_once(c, url, headers, cap, resolve, sink)
             except (httpx.TransportError, _Retryable) as e:
                 attempt += 1
                 if attempt > retries:
@@ -160,7 +167,7 @@ class _Retryable(Exception):
     pass
 
 
-def _fetch_once(c: httpx.Client, url: str, headers: dict, cap: int, resolve: bool) -> FetchResult:
+def _fetch_once(c: httpx.Client, url: str, headers: dict, cap: int, resolve: bool, sink: BinaryIO | None = None) -> FetchResult:
     current = url
     for _ in range(MAX_REDIRECTS + 1):
         validate_url(current, resolve=resolve)
@@ -182,9 +189,14 @@ def _fetch_once(c: httpx.Client, url: str, headers: dict, cap: int, resolve: boo
             if declared and declared.isdigit() and int(declared) > cap:
                 raise FetchError(f"response too large ({declared} bytes)")
             buf = bytearray()
+            size = 0
             for chunk in r.iter_bytes():
-                buf.extend(chunk)
-                if len(buf) > cap:
+                size += len(chunk)
+                if size > cap:
                     raise FetchError(f"response exceeded {cap} bytes")
+                if sink is not None:
+                    sink.write(chunk)
+                else:
+                    buf.extend(chunk)
             return FetchResult(url=current, status=r.status_code, content=bytes(buf), headers={k.lower(): v for k, v in r.headers.items()})
     raise FetchError("too many redirects")

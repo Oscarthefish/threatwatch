@@ -163,7 +163,8 @@ export function RankBars({ rows, unit, partialWeeks = 0, showPrev = true, nowLab
       {rows.map((r) => (
         <li key={r.key}>
           <div className="rank-name">
-            {r.href ? <Link to={r.href}>{r.name}</Link> : <span>{r.name}</span>}
+            {r.href?.startsWith('http') ? <a href={r.href} target="_blank" rel="noopener noreferrer">{r.name}<span className="sr-only"> (opens in a new tab)</span></a>
+              : r.href ? <Link to={r.href}>{r.name}</Link> : <span>{r.name}</span>}
             {r.sub && <span className="rank-sub">{r.sub}</span>}
           </div>
           <div className="rank-bar" role="img" aria-label={`${r.name}: ${r.value} ${unit}${showPrev && r.prev != null ? `, previous period ${r.prev}` : ''}`}>

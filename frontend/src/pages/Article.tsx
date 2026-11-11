@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from '../api'
 import type { ArticleDetail } from '../types'
 import {
-  ActionList, ArticleRow, BackLink, BookmarkButton, Confidence, copy, DateFlag, ErrorBox, Eyebrow, fmtDate, Loading, Severity, usePageTitle, useToast,
+  ActionList, ArticleRow, BackLink, BookmarkButton, Confidence, copy, DateFlag, ErrorBox, ExtLink, Eyebrow, fmtDate, Loading, Severity, techniqueUrl, usePageTitle, useToast,
 } from '../components/ui'
 import { FollowSheet } from '../components/FollowSheet'
 import { groupPath, isGroupKind } from '../components/trendsData'
@@ -206,6 +206,24 @@ export default function ArticlePage() {
             </section>
           )}
 
+          {(a.further_reading?.length ?? 0) > 0 && (
+            <section className="panel" aria-labelledby="read-h">
+              <header><h2 id="read-h">Further reading</h2><span className="xsmall muted">Primary sources</span></header>
+              <div className="body reading">
+                {a.further_reading!.map((sec) => (
+                  <div key={sec.section}>
+                    <h3 className="mini-h">{sec.section}</h3>
+                    {sec.note && <p className="xsmall muted mb-0">{sec.note}</p>}
+                    {sec.items.length > 0 && <ul className="reflist">{sec.items.map((i) => (
+                      <li key={i.url}><ExtLink href={i.url}>{i.title}</ExtLink>{i.note && <span className="xsmall muted"> · {i.note}</span>}</li>
+                    ))}</ul>}
+                  </div>
+                ))}
+                <p className="xsmall faint mt-3 mb-0">Links come from the CVE record, CISA KEV and MITRE ATT&CK, not from the article.</p>
+              </div>
+            </section>
+          )}
+
           {iocs.length > 0 && (
             <section className="panel" aria-labelledby="ioc-h">
               <header>
@@ -231,7 +249,9 @@ export default function ArticlePage() {
                 {ents.map(([t, list]) => (
                   <div key={t}>
                     <div className="field-label">{ENTITY_LABELS[t] ?? t}</div>
-                    <div className="chips">{list.map((e) => isGroupKind(t) ? (
+                    <div className="chips">{list.map((e) => t.startsWith('attack_technique') && techniqueUrl(e.value) ? (
+                      <ExtLink key={e.value} className="chip link-chip" href={techniqueUrl(e.value)!}>{e.value}{e.name ? ` ${e.name}` : ''}</ExtLink>
+                    ) : isGroupKind(t) ? (
                       <Link key={e.value} className="chip link-chip" to={groupPath(t, e.value)}>
                         {e.value}{e.method === 'ai' && <span className="ai-mark" aria-label="extracted by AI, verified in the source text">AI</span>}
                       </Link>

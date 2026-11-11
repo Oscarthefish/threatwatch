@@ -22,6 +22,14 @@ export function fmtDate(iso?: string | null): string {
 }
 export const TimeAgo = ({ iso }: { iso?: string | null }) => <time dateTime={iso ?? undefined} title={fmtDate(iso)}>{timeAgo(iso)}</time>
 
+// ---------------------------------------------------------- external links
+/** Link to another site: opens in a new tab, sends no referrer, and says so to screen readers. */
+export function ExtLink({ href, children, className }: { href: string; children: ReactNode; className?: string }) {
+  return <a className={className} href={href} target="_blank" rel="noopener noreferrer">{children}<span className="sr-only"> (opens in a new tab)</span></a>
+}
+/** MITRE ATT&CK technique page, derived from the ID (T1566.001 -> /techniques/T1566/001/). */
+export const techniqueUrl = (id: string) => (/^T\d{4}(\.\d{3})?$/i.test(id) ? `https://attack.mitre.org/techniques/${id.toUpperCase().replace('.', '/')}/` : null)
+
 // ------------------------------------------------------------- highlighting
 const escapeRe = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 /** Marks every occurrence of the given terms. Text is rendered as text, never parsed as HTML. */

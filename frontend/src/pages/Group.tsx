@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { api, ApiError } from '../api'
-import { ArticleCard, BackLink, Empty, ErrorBox, Eyebrow, Loading, usePageTitle, useToast } from '../components/ui'
+import { ArticleCard, BackLink, Empty, ErrorBox, ExtLink, Eyebrow, fmtDate, Loading, usePageTitle, useToast } from '../components/ui'
 import { RankBars } from '../components/charts'
 import { GroupTrendChart, groupPath, isGroupKind, useGroup } from '../components/GroupTrend'
 import { longDay } from '../components/trendsData'
@@ -11,7 +11,8 @@ import { IconEye } from '../components/icons'
 const KIND_LABEL: Record<string, string> = { actor: 'Threat actor', ransomware: 'Ransomware group', malware: 'Malware or tool' }
 const RELATED: [string, string][] = [['groups', 'Threat groups'], ['malware', 'Malware and tools'], ['cve', 'CVEs'], ['vendor', 'Vendors'], ['attack_technique', 'ATT&CK techniques']]
 
-function relatedHref(type: string, value: string) {
+function relatedHref(type: string, value: string, url?: string | null) {
+  if (url) return url
   if (type === 'cve') return `/vuln/${value}`
   if (isGroupKind(type)) return groupPath(type, value)
   return `/search?q=${encodeURIComponent(value)}`
@@ -91,6 +92,29 @@ export default function GroupPage() {
         </div>
 
         <aside className="doc-aside" aria-label="Related">
+          <section className="panel" aria-labelledby="g-att">
+            <header><h2 id="g-att">MITRE ATT&CK</h2>{g.attack && <ExtLink className="small" href={g.attack.url}>{g.attack.attack_id}</ExtLink>}</header>
+            <div className="body">
+              {g.attack ? <>
+                <p className="small">{g.attack.description}</p>
+                <p className="xsmall faint">MITRE's description{g.attack.modified ? `, updated ${fmtDate(g.attack.modified).split(',')[0]}` : ''}.</p>
+                {g.attack.aliases.length > 0 && <p className="xsmall muted">MITRE also lists: {g.attack.aliases.join(', ')}</p>}
+                <p className="mb-2"><ExtLink href={g.attack.url}>{g.attack.name} on MITRE ATT&CK</ExtLink><span className="xsmall muted"> · techniques, software and campaigns</span></p>
+                {g.attack.refs.length > 0 && (
+                  <details className="disclose">
+                    <summary>Reports MITRE cites ({g.attack.ref_count})</summary>
+                    <ul className="reflist">{g.attack.refs.map((r) => (
+                      <li key={r.url}><ExtLink href={r.url}>{r.description || r.source}</ExtLink></li>
+                    ))}</ul>
+                    {g.attack.ref_count > g.attack.refs.length && <p className="xsmall muted mb-0">The rest are listed on the MITRE page.</p>}
+                  </details>
+                )}
+              </> : g.attack_synced_at
+                ? <p className="small muted mb-0">MITRE ATT&CK does not track {g.name} as a {g.kind === 'actor' ? 'group' : 'software entry'}. Newer and smaller groups are often missing.</p>
+                : <p className="small muted mb-0">MITRE ATT&CK data has not been downloaded yet. It syncs weekly; the first sync runs on the next collection.</p>}
+            </div>
+          </section>
+
           <section className="panel" aria-labelledby="g-rel">
             <header><h2 id="g-rel">Reported alongside</h2><span className="xsmall muted">Shared stories</span></header>
             <div className="body">
@@ -99,7 +123,7 @@ export default function GroupPage() {
                   <div key={k}>
                     <h3 className="mini-h">{label}</h3>
                     <RankBars showPrev={false} unit="shared stories"
-                      rows={g.related[k].map((r) => ({ key: r.type + r.value, name: r.value, sub: r.name ?? undefined, value: r.stories, href: relatedHref(r.type, r.value) }))} />
+                      rows={g.related[k].map((r) => ({ key: r.type + r.value, name: r.value, sub: r.name ?? undefined, value: r.stories, href: relatedHref(r.type, r.value, r.url) }))} />
                   </div>
                 ))}
               <p className="xsmall faint mt-3 mb-0">Named in the same stories, roundups excluded. Co-occurrence is not attribution.</p>

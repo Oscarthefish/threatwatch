@@ -20,6 +20,8 @@ Works in a desktop browser and as an installable PWA on Android.
 - **Breaking** — exploited vulnerabilities, new CISA KEV entries, significant incidents (source-backed severity + confidence)
 - **Threat Intelligence** — ransomware, malware, actors, phishing, ATT&CK
 - **Vulnerabilities** — CVE, CISA KEV, FIRST EPSS, CVSS (CVE.org), affected products, references
+- **Trends and threat group profiles** — reporting charts; each group links to its MITRE ATT&CK entry (synced weekly from the public mitre/cti STIX data)
+- **Further reading** — on each article, primary sources from the CVE record, CISA KEV and MITRE ATT&CK
 - **SOC & DFIR** — DFIR Report, SANS ISC, detection/hunting, Sigma & Splunk content releases
 - **NZ & APAC** — NCSC NZ alerts, ASD’s ACSC, regional reporting
 - **Threat Watch** — followed incidents/CVEs/actors/malware/topics with timelines, change history and review queue

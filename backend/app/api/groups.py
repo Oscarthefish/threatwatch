@@ -97,7 +97,15 @@ def group(kind: str, name: str, days: int = Query(90, ge=28, le=365), conn: sqli
             watch = {"id": w["id"], "title": w["title"]}
             break
 
+    from ..ingest.attack import lookup
+    from ..intel.reading import attack_summary
+    attack = attack_summary(lookup(conn, [canon, *aliases], "group" if kind == "actor" else "software"))
+    attack_synced = conn.execute("SELECT MAX(synced_at) FROM attack_objects").fetchone()[0]
+    for r in related.get("attack_technique", []):
+        from ..intel.reading import technique_url
+        r["url"] = technique_url(r["value"])
     return {
+        "attack": attack, "attack_synced_at": attack_synced,
         "kind": kind, "name": canon, "aliases": aliases, "known": bool(ent_ids), "days": days,
         "period_start": cur_start.isoformat(), "coverage_start": coverage.isoformat(), "current_partial": cur_start < coverage,
         "comparison_indicative": prev_start < coverage,

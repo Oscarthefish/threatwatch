@@ -19,6 +19,15 @@
 
 Docker group note: the `deploy` user’s docker group membership is root-equivalent on the host. Restrict SSH for that account to keys (and later to the tailnet).
 
+## External reference data and links
+- MITRE ATT&CK is fetched weekly from `raw.githubusercontent.com` (mitre/cti) through the same SSRF-guarded fetcher as
+  every feed (public IPs only, per-hop redirect checks), with a 150 MB cap, conditional requests by ETag, and the body
+  streamed to a temporary file in the data volume that is deleted after parsing. A download yielding fewer than 50
+  groups/software is rejected so a truncated file cannot wipe good data.
+- Links shown to the user ("Further reading", ATT&CK references, technique pages) come only from stored data (CVE
+  records, CISA KEV, MITRE) or are derived from a validated technique ID. Only `http(s)` URLs are rendered, always
+  with `target="_blank" rel="noopener noreferrer"`, so the destination gets no referrer and no window handle.
+
 ## Logging
 
 Application logs contain source keys, counts, HTTP status classes and exception types — not

@@ -168,3 +168,14 @@ pre-collection weeks shaded, table view), headline figures (stories vs the perio
 reported, sources), subjects most often reported alongside it (with a note that co-occurrence is not attribution),
 reports naming it (roundups listed separately and not counted), and Follow. Group and malware names on Trends,
 Today and article entity lists link here, and followed actor/malware items show the same chart under their record.
+
+## Further reading and ATT&CK
+- **Article → Further reading:** per CVE (only those with references or a KEV entry, exploited first, at most 6): the
+  record's own references, the CVE.org record and the CISA KEV entry; then MITRE ATT&CK pages for named groups and
+  software and technique pages. A story naming 170 CVEs shows the useful few and points to the rest.
+- **Group profile → MITRE ATT&CK panel:** MITRE's ID and link, MITRE's own description (labelled as such, citation
+  markers removed), the aliases MITRE lists, and the reports MITRE cites (first 12, rest on MITRE's page). Groups MITRE
+  does not track say so instead of showing nothing.
+- **Technique chips** on articles and group profiles link to attack.mitre.org. External links carry an off-screen
+  "(opens in a new tab)" and are underlined in reading lists so they are not distinguished by colour alone.
+- **Settings:** ATT&CK appears under Reference data with its health and switch; intervals read "weekly", "daily", etc.
