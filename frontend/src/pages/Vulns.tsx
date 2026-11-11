@@ -2,7 +2,7 @@ import { useInfiniteQuery } from '@tanstack/react-query'
 import { Link, useSearchParams } from 'react-router-dom'
 import { api, qs } from '../api'
 import type { Vuln } from '../types'
-import { ErrorBox, Highlight, LoadMore, Loading, NoResults, PageHeader } from '../components/ui'
+import { ErrorBox, Highlight, LoadMore, Loading, NoResults, PageHeader, Term } from '../components/ui'
 
 const PAGE = 50
 
@@ -53,6 +53,7 @@ export default function Vulns() {
     <>
       <PageHeader title="Vulnerabilities" eyebrow={['Intelligence', 'CVE / KEV / EPSS / CVSS']}
         sub={stats ? `${stats.total.toLocaleString()} CVEs tracked, ${stats.kev.toLocaleString()} known to be exploited (CISA KEV).` : 'CVEs from reporting and the CISA KEV catalogue, scored with FIRST EPSS and CVSS.'} />
+      <p className="small muted term-help">New to these scores? <Term id="kev">KEV</Term> means confirmed exploitation, <Term id="epss">EPSS</Term> is the chance of exploitation in 30 days, <Term id="cvss">CVSS</Term> is how severe it would be.</p>
       <div className="filters">
         <form role="search" className="row nowrap" onSubmit={(e) => { e.preventDefault(); set('q', String(new FormData(e.currentTarget).get('q') ?? '').trim()) }}>
           <label className="sr-only" htmlFor="vq">Filter by CVE, vendor or product</label>

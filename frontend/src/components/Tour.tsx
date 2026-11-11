@@ -61,7 +61,7 @@ export const STEPS: Step[] = [
   { section: 'Settings', route: '/settings', target: ['section[aria-labelledby="col-h"]', 'main .page-head'], title: 'Settings',
     body: <>Collection health and the run schedule, every source with an on/off switch, AI summaries, push notifications for this device, and data retention. This tour can be restarted here.</> },
   { section: 'Done', title: 'That is everything',
-    body: <>Press <kbd className="key">?</kbd> at any time for keyboard shortcuts: <kbd className="key">j</kbd> and <kbd className="key">k</kbd> move through lists, <kbd className="key">o</kbd> opens, <kbd className="key">b</kbd> bookmarks. A good first step is to follow a CVE or product you care about.</> },
+    body: <>Press <kbd className="key">?</kbd> at any time for keyboard shortcuts: <kbd className="key">j</kbd> and <kbd className="key">k</kbd> move through lists, <kbd className="key">o</kbd> opens, <kbd className="key">b</kbd> bookmarks. Unfamiliar terms such as KEV, EPSS and CVSS are explained in the Glossary, at the bottom of the sidebar. A good first step is to follow a CVE or product you care about.</> },
 ]
 
 const SEEN = 'tw-tour-seen'

@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from '../api'
 import type { ArticleDetail } from '../types'
 import {
-  ActionList, ArticleRow, BackLink, BookmarkButton, Confidence, copy, DateFlag, ErrorBox, ExtLink, Eyebrow, fmtDate, Loading, Severity, techniqueUrl, usePageTitle, useToast,
+  ActionList, ArticleRow, BackLink, BookmarkButton, Confidence, copy, DateFlag, ErrorBox, ExtLink, Eyebrow, fmtDate, Loading, Severity, techniqueUrl, Term, usePageTitle, useToast,
 } from '../components/ui'
 import { FollowSheet } from '../components/FollowSheet'
 import { groupPath, isGroupKind } from '../components/trendsData'
@@ -137,10 +137,10 @@ export default function ArticlePage() {
                 ? <ul className="reasons">{a.severity_reasons.map((r) => <li key={r}>{r}</li>)}</ul>
                 : <p className="small muted">No severity signals were found in the source text.</p>}
               <dl className="kv mt-3">
-                <dt>Confidence</dt><dd><Confidence value={a.confidence} /> <span className="muted">{CONF_EXPLAIN[a.confidence] ?? ''}</span></dd>
+                <dt><Term id="confidence">Confidence</Term></dt><dd><Confidence value={a.confidence} /> <span className="muted">{CONF_EXPLAIN[a.confidence] ?? ''}</span></dd>
                 <dt>Source</dt><dd>{a.source.name}{a.related.length > 0 && <span className="muted">, and {a.related.length} other source{a.related.length > 1 ? 's' : ''} below</span>}</dd>
               </dl>
-              <p className="xsmall faint mb-0 mt-3">Ratings come from fixed rules applied to the source text, such as a CISA KEV listing, reported exploitation or an official advisory.</p>
+              <p className="xsmall faint mb-0 mt-3">Ratings come from fixed rules applied to the source text, such as a CISA KEV listing, reported exploitation or an official advisory. <Term id="severity">How severity works</Term>.</p>
             </div>
           </section>
 

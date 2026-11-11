@@ -1,7 +1,7 @@
 import { useSearchParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { api } from '../api'
-import { ErrorBox, Loading, PageHeader } from '../components/ui'
+import { ErrorBox, Loading, PageHeader, Term } from '../components/ui'
 import { ColumnChart, DataTable, Dumbbells, RankBars, type Column } from '../components/charts'
 import { day, href, KEV, longDay, pct, SEV, TYPE, type TrendData as T } from '../components/trendsData'
 
@@ -41,7 +41,7 @@ function Body({ t }: { t: T }) {
         <p className="notice coverage" role="note">
           <strong>Coverage.</strong> Collection began on {longDay(t.coverage_start)}. Stories dated earlier come from feed backlogs, which only hold each
           source's newest items, so those periods are incomplete and shaded in the charts. Rising and falling compare each subject's
-          share of all stories, which corrects for that, but treat them as indicative until {longDay(reliableFrom)}. CISA KEV figures are complete.
+          <Term id="share">share of all stories</Term>, which corrects for that, but treat them as indicative until {longDay(reliableFrom)}. CISA KEV figures are complete.
         </p>
       )}
 
@@ -139,7 +139,7 @@ function Body({ t }: { t: T }) {
       </div>
       <p className="xsmall faint">
         How this is counted: stories are grouped articles about the same event, by the publisher's date. Group, malware and vendor counts leave out
-        roundups and podcasts, which name many unrelated subjects. Counts reflect reporting, not the number of attacks.
+        roundups and podcasts, which name many unrelated subjects. Counts reflect reporting, not the number of attacks. See the <Term id="story">Glossary</Term> for terms.
       </p>
     </div>
   )

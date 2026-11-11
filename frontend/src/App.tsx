@@ -20,6 +20,7 @@ import Notifications from './pages/Notifications'
 import Settings from './pages/Settings'
 import Trends from './pages/Trends'
 import GroupPage from './pages/Group'
+import Glossary from './pages/Glossary'
 
 type AuthState = 'checking' | 'in' | 'out'
 
@@ -57,6 +58,7 @@ export default function App() {
           tags={[['exploited', 'Exploited'], ['incident', 'Incidents'], ['vulnerability', 'Vulnerabilities'], ['ransomware', 'Ransomware'], ['detection', 'Detection & hunting']]} />} />
         <Route path="/vulns" element={<Vulns />} />
         <Route path="/trends" element={<Trends />} />
+        <Route path="/glossary" element={<Glossary />} />
         <Route path="/group/:kind/:name" element={<GroupPage />} />
         <Route path="/vuln/:cve" element={<VulnDetail />} />
         <Route path="/article/:id" element={<ArticlePage />} />

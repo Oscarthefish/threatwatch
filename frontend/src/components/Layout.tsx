@@ -6,7 +6,7 @@ import { Sheet } from './Sheet'
 import { ShortcutsSheet, useShortcuts } from './Shortcuts'
 import { TourProvider, tourSeen, useTour } from './Tour'
 import { timeAgo } from './ui'
-import { IconBell, IconBolt, IconBookmark, IconBug, IconChart, IconEye, IconCompass, IconGlobe, IconKeyboard, IconMoon, IconMore, IconSearch, IconSearchDoc, IconSettings, IconSun, IconTarget, IconToday } from './icons'
+import { IconBell, IconBolt, IconBook, IconBookmark, IconBug, IconChart, IconEye, IconCompass, IconGlobe, IconKeyboard, IconMoon, IconMore, IconSearch, IconSearchDoc, IconSettings, IconSun, IconTarget, IconToday } from './icons'
 
 type NavItem = { to: string; label: string; short?: string; icon: (p: React.SVGProps<SVGSVGElement>) => React.ReactElement; end?: boolean }
 
@@ -130,6 +130,7 @@ export function Layout({ children }: { children: ReactNode }) {
           <li><NavLink to="/notifications"><IconBell />Notifications {unread > 0 && <span className="badge" aria-label={`${unread} unread`}>{unread}</span>}</NavLink></li>
         </ul>
         <div className="sidebar-foot">
+          <NavLink to="/glossary"><IconBook />Glossary</NavLink>
           <button type="button" className="navbtn" onClick={tour.start}><IconCompass />Take the tour</button>
           <NavLink to="/settings"><IconSettings />Settings</NavLink>
           <CollectionStatus />
@@ -176,6 +177,7 @@ export function Layout({ children }: { children: ReactNode }) {
           <nav className="navlist" aria-label="More sections">
             {[INTEL[2], INTEL[4], INTEL[5], INTEL[6], YOURS[1]].map((n) => <Link key={n.to} to={n.to}><n.icon />{n.label}</Link>)}
             <Link to="/notifications"><IconBell />Notifications {unread > 0 && <span className="badge">{unread}</span>}</Link>
+            <Link to="/glossary"><IconBook />Glossary</Link>
             <Link to="/settings"><IconSettings />Settings</Link>
             <button type="button" onClick={() => { setMore(false); setTimeout(tour.start, 50) }}><IconCompass />Take the tour</button>
           </nav>

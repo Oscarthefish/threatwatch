@@ -10,7 +10,7 @@ import { Sheet } from './Sheet'
 const GO: Record<string, [string, string]> = {
   t: ['/', 'Today'], b: ['/breaking', 'Breaking'], i: ['/intel', 'Threat intelligence'], v: ['/vulns', 'Vulnerabilities'], r: ['/trends', 'Trends'],
   d: ['/soc', 'SOC & DFIR'], a: ['/apac', 'NZ & APAC'], f: ['/watch', 'Following'], s: ['/saved', 'Saved'],
-  n: ['/notifications', 'Notifications'], p: ['/settings', 'Settings'],
+  n: ['/notifications', 'Notifications'], l: ['/glossary', 'Glossary'], p: ['/settings', 'Settings'],
 }
 
 export const SHORTCUTS: { group: string; keys: [string[], string][] }[] = [

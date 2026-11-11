@@ -24,4 +24,5 @@ export const IconBack = (p: P) => <svg {...base} {...p}><path d="M15 18l-6-6 6-6
 export const IconSave = IconBookmark
 export const IconKeyboard = (p: P) => <svg {...base} {...p}><rect x="2" y="6" width="20" height="12" rx="2" /><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M7 14h10" /></svg>
 export const IconChart = (p: P) => <svg {...base} {...p}><path d="M4 20V10M10 20V4M16 20v-7M22 20H2" /></svg>
+export const IconBook = (p: P) => <svg {...base} {...p}><path d="M4 4.5A1.5 1.5 0 0 1 5.5 3H20v15H5.5A1.5 1.5 0 0 0 4 19.5z" /><path d="M4 19.5A1.5 1.5 0 0 0 5.5 21H20v-3" /></svg>
 export const IconCompass = (p: P) => <svg {...base} {...p}><circle cx="12" cy="12" r="9" /><path d="m15.5 8.5-2 5-5 2 2-5z" /></svg>

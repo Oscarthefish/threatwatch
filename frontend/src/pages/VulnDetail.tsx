@@ -3,7 +3,7 @@ import { Link, useParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { api } from '../api'
 import type { Vuln } from '../types'
-import { ArticleCard, BackLink, Empty, ErrorBox, Eyebrow, Loading, usePageTitle } from '../components/ui'
+import { ArticleCard, BackLink, Empty, ErrorBox, Eyebrow, Loading, usePageTitle, Term } from '../components/ui'
 import { FollowSheet } from '../components/FollowSheet'
 import { IconExternal, IconEye } from '../components/icons'
 
@@ -36,7 +36,7 @@ export default function VulnDetail() {
         <div className="doc-main">
           {v.kev && (
             <section className="panel review" aria-labelledby="kevact-h">
-              <header><h2 id="kevact-h">Exploited in the wild</h2><span className="basis">CISA KEV</span></header>
+              <header><h2 id="kevact-h">Exploited in the wild</h2><Term id="kev">What is KEV?</Term></header>
               <div className="body">
                 <p className="mb-2"><span className="strong">CISA required action: </span>{v.kev_required_action}</p>
                 <p className="small muted mb-0">Added {v.kev_date_added}. US federal deadline {v.kev_due_date}.
@@ -62,9 +62,9 @@ export default function VulnDetail() {
             <header><h2 id="score-h">Scores</h2></header>
             <div className="body">
               <dl className="kv">
-                <dt>EPSS</dt>
+                <dt><Term id="epss">EPSS</Term></dt>
                 <dd>{v.epss != null ? <><b className="mono">{(v.epss * 100).toFixed(2)}%</b> chance of exploitation in 30 days<div className="xsmall muted">percentile {((v.epss_percentile ?? 0) * 100).toFixed(0)} · {v.epss_date}</div></> : 'Not scored'}</dd>
-                <dt>CVSS</dt>
+                <dt><Term id="cvss">CVSS</Term></dt>
                 <dd>{v.cvss_score != null ? <><b className="mono">{v.cvss_score}</b> {v.cvss_severity?.toLowerCase()}<div className="xsmall muted wrap-any">{v.cvss_source}</div><div className="mono xsmall muted wrap-any">{v.cvss_vector}</div></> : 'Not yet published'}</dd>
               </dl>
             </div>

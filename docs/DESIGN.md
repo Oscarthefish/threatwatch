@@ -179,3 +179,14 @@ Today and article entity lists link here, and followed actor/malware items show 
 - **Technique chips** on articles and group profiles link to attack.mitre.org. External links carry an off-screen
   "(opens in a new tab)" and are underlined in reading lists so they are not distinguished by colour alone.
 - **Settings:** ATT&CK appears under Reference data with its health and switch; intervals read "weekly", "daily", etc.
+
+## Glossary
+`/glossary` (`pages/Glossary.tsx`, content in `components/glossary.ts`): 31 terms in three groups (vulnerabilities and
+scores, threat intelligence, Threat Watch terms). Each entry has a plain definition, an "In Threat Watch" line saying
+what the app does with it, related terms, and a link to the official home of the standard where there is one. Entries
+are linkable (`/glossary#kev`) and highlight on arrival; the list filters as you type.
+
+`<Term id="kev">` renders a dotted-underline link to an entry. Used for EPSS/CVSS/KEV on CVE pages, the Vulnerabilities
+help line, the Breaking KEV panel, Confidence and "How severity works" on articles, share of stories on Trends, and the
+severity popover everywhere. Keep the "In Threat Watch" lines in step with the code (severity rules:
+`backend/app/intel/classify.py`).

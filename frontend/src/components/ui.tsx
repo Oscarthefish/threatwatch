@@ -22,6 +22,12 @@ export function fmtDate(iso?: string | null): string {
 }
 export const TimeAgo = ({ iso }: { iso?: string | null }) => <time dateTime={iso ?? undefined} title={fmtDate(iso)}>{timeAgo(iso)}</time>
 
+// ---------------------------------------------------------------- glossary
+/** A term that links to its glossary entry (dotted underline marks it as a definition link). */
+export function Term({ id, children }: { id: string; children: ReactNode }) {
+  return <Link className="term" to={`/glossary#${id}`}>{children}<span className="sr-only"> (definition)</span></Link>
+}
+
 // ---------------------------------------------------------- external links
 /** Link to another site: opens in a new tab, sends no referrer, and says so to screen readers. */
 export function ExtLink({ href, children, className }: { href: string; children: ReactNode; className?: string }) {
@@ -87,6 +93,7 @@ export function Severity({ level, reasons }: { level: number | string; reasons?:
       {open && <span className="popover" id={id} role="note">
         <span className="pop-title">Why {label}</span>
         <ul>{reasons.map((r) => <li key={r}>{r}</li>)}</ul>
+        <Link className="pop-more" to="/glossary#severity">How severity works</Link>
       </span>}
     </span>
   )

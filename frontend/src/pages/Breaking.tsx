@@ -3,7 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { api, qs } from '../api'
 import type { ArticleBrief, Vuln } from '../types'
-import { ArticleCard, Empty, ErrorBox, Highlight, Loading, OrderNote, PageHeader, TimeAgo } from '../components/ui'
+import { ArticleCard, Empty, ErrorBox, Highlight, Loading, OrderNote, PageHeader, Term, TimeAgo } from '../components/ui'
 import { humanReason } from '../components/follow'
 import { IconBolt, IconBug, IconEye } from '../components/icons'
 
@@ -120,7 +120,7 @@ function Body({ d, order }: { d: B; order: string }) {
         </header>
         <div className="body">
           <p className="xsmall muted">
-            Added to CISA's Known Exploited Vulnerabilities catalogue in the last 7 days{ransomware ? `; ${ransomware} with known ransomware use` : ''}. Newest first, then by EPSS.
+            Added to CISA's <Term id="kev">Known Exploited Vulnerabilities</Term> catalogue in the last 7 days{ransomware ? `; ${ransomware} with known ransomware use` : ''}. Newest first, then by EPSS.
           </p>
           {d.kev_new.length === 0 ? <p className="small muted mb-0">No additions in the last 7 days.</p> : <>
             <ul className="plain">{kev.map((v) => <KevItem key={v.cve_id} v={v} />)}</ul>
