@@ -25,9 +25,10 @@ def html_to_text(raw: str | None, max_len: int = 20000) -> str:
     s = _DROP.sub(" ", raw)
     s = _BLOCK.sub("\n", s)
     s = nh3.clean(s, tags=set(), attributes={}, strip_comments=True)
-    s = html.unescape(s)
-    if _ENTITY.search(s):  # some feeds double-escape (&amp;quot;) — one more pass, never more
+    for _ in range(3):  # some feeds escape entities two or three times (&amp;amp;quot;)
         s = html.unescape(s)
+        if not _ENTITY.search(s):
+            break
     s = _CTRL.sub("", s)
     s = "\n".join(_WS.sub(" ", line).strip() for line in s.split("\n"))
     s = _NL.sub("\n\n", s).strip()

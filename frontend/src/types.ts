@@ -26,6 +26,8 @@ export interface ArticleBrief {
   bookmark?: { note: string; tags: string[]; created_at: string } | null
   last_read_at?: string
   link?: EvidenceLink
+  snippet?: string | null
+  date_notes?: string[]
 }
 
 export interface Vuln {
@@ -138,6 +140,8 @@ export interface EvidenceLink {
   assessment: string
   linked_by: string
   linked_at: string
+  passages?: { text: string; terms: string[] }[]
+  terms?: string[]
 }
 
 export interface Watch {

@@ -68,7 +68,9 @@ def _list_articles(conn, *, section=None, q=None, severity_min=None, source=None
         where.append("(a.cluster_id = a.id OR a.cluster_id IS NULL)")
     order_sql = {"rank": "a.score DESC, a.published_at DESC", "new": "a.published_at DESC",
                  "relevance": "bm25(articles_fts) ASC, a.published_at DESC" if q else "a.published_at DESC"}[order]
-    sql = f"""SELECT {ARTICLE_LIST_COLS} FROM articles a JOIN sources s ON s.id=a.source_id {join}
+    # FTS5 snippet marks matches with \x02 ... \x03; the client turns them into <mark> (never parsed as HTML)
+    extra = ", snippet(articles_fts, -1, char(2), char(3), '…', 32) AS snip" if q else ""
+    sql = f"""SELECT {ARTICLE_LIST_COLS}{extra} FROM articles a JOIN sources s ON s.id=a.source_id {join}
               {('WHERE ' + ' AND '.join(where)) if where else ''} ORDER BY {order_sql} LIMIT ? OFFSET ?"""
     rows = conn.execute(sql, [*params, limit, offset]).fetchall()
     return [article_brief(r) for r in rows]
@@ -241,17 +243,37 @@ def mark_read(article_id: int, conn: sqlite3.Connection = Depends(get_db)):
 
 
 @router.get("/breaking")
-def breaking(conn: sqlite3.Connection = Depends(get_db)):
-    arts = _list_articles(conn, section="breaking", days=3, limit=40, order="rank")
+def breaking(order: str = Query("rank", pattern="^(rank|new)$"), conn: sqlite3.Connection = Depends(get_db)):
+    """Breaking: followed updates, incident reporting and newly exploited CVEs, kept apart.
+
+    CISA KEV catalogue bulletins are not repeated as incidents; they are summarised with the KEV list.
+    """
+    from ..intel import text as textutil
+    from ..intel.watch import _KEV_BULLETIN, watch_terms
+
+    arts = _list_articles(conn, section="breaking", days=3, limit=60, order=order)
+    bulletins = [a for a in arts if _KEV_BULLETIN.search(a["title"])]
+    incidents = [a for a in arts if not _KEV_BULLETIN.search(a["title"])][:40]
     kev = [vuln_dict(r) for r in conn.execute(
-        "SELECT * FROM vulnerabilities WHERE kev=1 AND kev_date_added >= ? ORDER BY kev_date_added DESC, cve_id LIMIT 30",
+        "SELECT * FROM vulnerabilities WHERE kev=1 AND kev_date_added >= ? ORDER BY kev_date_added DESC, epss DESC, cve_id LIMIT 60",
         ((utcnow() - timedelta(days=7)).strftime("%Y-%m-%d"),))]
-    watch_alerts = [dict(r) for r in conn.execute(
-        """SELECT w.id AS watch_id, w.title AS watch_title, a.id AS article_id, a.title, we.assessment, we.linked_at
-           FROM watch_evidence we JOIN watches w ON w.id=we.watch_id JOIN articles a ON a.id=we.article_id
-           WHERE we.significance='important' AND we.linked_at >= ? ORDER BY we.linked_at DESC LIMIT 15""",
-        (iso(utcnow() - timedelta(days=3)),))]
-    return {"articles": arts, "kev_new": kev, "watch_alerts": watch_alerts}
+    alerts = []
+    for r in conn.execute(
+        """SELECT w.id AS watch_id, w.title AS watch_title, w.kind, w.identifiers, w.aliases, a.id AS article_id, a.title,
+                  a.summary_text, a.content_text, s.name AS source_name, we.assessment, we.match_reasons, we.linked_at, we.significance
+           FROM watch_evidence we JOIN watches w ON w.id=we.watch_id JOIN articles a ON a.id=we.article_id JOIN sources s ON s.id=a.source_id
+           WHERE we.status='linked' AND we.significance='important' AND we.linked_at >= ? ORDER BY we.linked_at DESC LIMIT 15""",
+            (iso(utcnow() - timedelta(days=3)),)):
+        d = dict(r)
+        terms = watch_terms(d)
+        d["passages"] = textutil.passages(f"{d['title']}\n{d.pop('summary_text') or ''}\n{d.pop('content_text') or ''}", terms, limit=1)
+        d["match_reasons"] = jloads(d["match_reasons"])
+        d["title"] = textutil.unescape_all(d["title"])
+        for k in ("identifiers", "aliases"):
+            d.pop(k)
+        alerts.append(d)
+    return {"articles": incidents, "kev_new": kev, "kev_bulletins": [{"id": a["id"], "title": a["title"], "published_at": a["published_at"],
+            "source": a["source"]} for a in bulletins], "watch_alerts": alerts, "order": order}
 
 
 @router.get("/vulnerabilities")

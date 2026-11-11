@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from '../api'
 import type { ArticleDetail } from '../types'
 import {
-  ActionList, ArticleRow, BackLink, BookmarkButton, Confidence, copy, ErrorBox, Eyebrow, fmtDate, Loading, Severity, usePageTitle, useToast,
+  ActionList, ArticleRow, BackLink, BookmarkButton, Confidence, copy, DateFlag, ErrorBox, Eyebrow, fmtDate, Loading, Severity, usePageTitle, useToast,
 } from '../components/ui'
 import { FollowSheet } from '../components/FollowSheet'
 import { IconCopy, IconExternal, IconEye } from '../components/icons'
@@ -18,6 +18,12 @@ const ENTITY_ORDER = ['actor', 'ransomware', 'malware', 'victim', 'attack_techni
 const SECTION_LABELS: Record<string, [string, string]> = {
   breaking: ['Breaking', '/breaking'], 'threat-intel': ['Threat intelligence', '/intel'], vulnerabilities: ['Vulnerabilities', '/vulns'],
   'soc-dfir': ['SOC & DFIR', '/soc'], 'nz-apac': ['NZ & APAC', '/apac'],
+}
+const CONF_EXPLAIN: Record<string, string> = {
+  official: 'Published by an official body (a government CERT, CISA or the vendor).',
+  corroborated: 'Reported independently by three or more sources.',
+  'multi-source': 'Reported by two independent sources.',
+  'single-source': 'Only one source so far. Treat details as provisional.',
 }
 const IOC_TYPES = ['ipv4', 'domain', 'url', 'sha256', 'sha1', 'md5']
 const EXPLOIT: Record<string, string> = {
@@ -78,6 +84,7 @@ export default function ArticlePage() {
       <header className="doc-head">
         <Eyebrow parts={[a.source.name, fmtDate(a.published_at)]} />
         <h1>{a.title}</h1>
+        <DateFlag notes={a.date_notes} full />
         <div className="row doc-tags">
           <Severity level={a.severity} reasons={a.severity_reasons} />
           <Confidence value={a.confidence} />
@@ -111,12 +118,28 @@ export default function ArticlePage() {
                 <p className="xsmall faint mb-0">{EXPLOIT[a.ai.exploitation_status] ?? ''}. Generated from the source text; check the original before acting.</p>
               </> : <>
                 {sourceText ? <p className="lead">{leadText}</p> : <p className="muted">The feed gave no text for this item. Read it on {a.source.name}.</p>}
-                <h3>Why it is rated {['info', 'low', 'medium', 'high', 'critical'][a.severity]}</h3>
-                <ul className="claims">{a.severity_reasons.map((r) => <li key={r}>{r}</li>)}</ul>
+                <p className="xsmall faint">The publisher's own words, from its feed.</p>
                 {a.ai_available && (
                   <button type="button" className="btn" aria-busy={summarise.isPending || undefined} onClick={() => summarise.mutate()}>Summarise with AI</button>
                 )}
               </>}
+            </div>
+          </section>
+
+          <section className={`panel rating s${a.severity}`} aria-labelledby="why-h">
+            <header>
+              <h2 id="why-h">Why it is rated {['info', 'low', 'medium', 'high', 'critical'][a.severity]}</h2>
+              <Severity level={a.severity} />
+            </header>
+            <div className="body">
+              {a.severity_reasons.length > 0
+                ? <ul className="reasons">{a.severity_reasons.map((r) => <li key={r}>{r}</li>)}</ul>
+                : <p className="small muted">No severity signals were found in the source text.</p>}
+              <dl className="kv mt-3">
+                <dt>Confidence</dt><dd><Confidence value={a.confidence} /> <span className="muted">{CONF_EXPLAIN[a.confidence] ?? ''}</span></dd>
+                <dt>Source</dt><dd>{a.source.name}{a.related.length > 0 && <span className="muted">, and {a.related.length} other source{a.related.length > 1 ? 's' : ''} below</span>}</dd>
+              </dl>
+              <p className="xsmall faint mb-0 mt-3">Ratings come from fixed rules applied to the source text, such as a CISA KEV listing, reported exploitation or an official advisory.</p>
             </div>
           </section>
 

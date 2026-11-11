@@ -127,3 +127,17 @@ there is none, so the tour never stalls.
 - Keyboard: arrow keys step, Esc ends, Tab stays inside the card, focus moves to each step's heading and returns to the
   opener when the tour ends. Card verified with axe at 390 and 1440 px.
 - When adding a section, add a step to `STEPS` with plain, specific copy (no em dashes).
+
+## Batch 8: clarity pass (November 2026)
+| Area | Change |
+|---|---|
+| Breaking | Incidents lead the page; followed updates and a 5-item KEV preview ("Show all") sit in a rail on wide screens and stack above/below on phones. CISA KEV catalogue announcements are no longer repeated as incidents. Priority/Newest toggle with a one-line explanation of the order. |
+| Section headings | Kind-labelled headings (Following, Incidents, Newly exploited) with a count, so the three kinds of information never blur. |
+| Follow alerts | Each shows what changed, the sentence that matched (terms highlighted) and the report. Broad bulletins and roundups no longer present unrelated CVEs or actors as changes. |
+| Cards | Headline 17 px; metadata on one quiet line (severity, source, time, confidence, extra sources, region, date check). Excerpts end on whole words or sentences; publisher fragments are dropped. |
+| Search | Matching passage from the full text (FTS5 snippet) with terms highlighted; titles, CVE rows and followed items highlighted too. |
+| Article | "Why it is rated …" panel with reasons, confidence explained and source; "What to do" split into evidence-backed steps and standard practice. Date check shown under the title when dates disagree. |
+| Identity | Small teal square leads each page's context line; larger page titles on desktop. |
+
+Highlighting uses `<mark>` with full text colour (AA in both themes). The server marks search matches with control
+characters, which the client turns into elements; nothing is parsed as HTML.

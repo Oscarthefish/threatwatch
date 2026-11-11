@@ -183,6 +183,29 @@ def backfill_actions(conn: sqlite3.Connection) -> int:
     return len(ids)
 
 
+TEXT_CLEAN_VERSION = 1
+
+
+def clean_stored_text(conn: sqlite3.Connection) -> int:
+    """Decode HTML entities left in text stored by older versions (feeds that escape two or three times)."""
+    from ..db import get_setting, set_setting
+    from ..intel.text import unescape_all
+
+    if get_setting(conn, "text_clean_version", 0) >= TEXT_CLEAN_VERSION:
+        return 0
+    rows = conn.execute(
+        "SELECT id, title, summary_text, content_text FROM articles WHERE title LIKE '%&%;%' OR summary_text LIKE '%&%;%' OR content_text LIKE '%&%;%'"
+    ).fetchall()
+    changed = 0
+    for r in rows:
+        new = [unescape_all(r[k]) for k in ("title", "summary_text", "content_text")]
+        if new != [r["title"], r["summary_text"], r["content_text"]]:
+            conn.execute("UPDATE articles SET title=?, summary_text=?, content_text=? WHERE id=?", (*new, r["id"]))
+            changed += 1
+    set_setting(conn, "text_clean_version", TEXT_CLEAN_VERSION)
+    return changed
+
+
 def assign_cluster(conn: sqlite3.Connection, article_id: int) -> None:
     a = conn.execute("SELECT id, source_id, title_tokens, published_at, cluster_id FROM articles WHERE id=?", (article_id,)).fetchone()
     toks = set(a["title_tokens"].split())

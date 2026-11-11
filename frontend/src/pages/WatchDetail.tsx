@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from '../api'
 import type { ArticleBrief, Claim, SocAction, WatchDetail, WatchRecord } from '../types'
 import {
-  ActionList, ArticleCard, BackLink, CitedText, Cites, copy, Empty, ErrorBox, Eyebrow, Field, fmtDate, Loading, TimeAgo, usePageTitle, useToast,
+  ActionList, ArticleCard, BackLink, CitedText, Cites, copy, Empty, ErrorBox, Eyebrow, Field, fmtDate, Highlight, Loading, TimeAgo, usePageTitle, useToast,
 } from '../components/ui'
 import { IconCopy, IconRefresh } from '../components/icons'
 import { useConfirm } from '../components/Sheet'
@@ -98,10 +98,13 @@ function MatchNote({ a }: { a: ArticleBrief }) {
   const l = a.link
   if (!l) return null
   return (
-    <p className="xsmall muted mb-0 mt-2">
-      <span className="strong">{l.linked_by === 'auto' ? matchStrength(l.match_score) : l.linked_by === 'origin' ? 'Where you started following' : 'Linked by you'}</span>
-      {l.linked_by === 'auto' && l.match_reasons.length > 0 && <>: {l.match_reasons.map(humanReason).join(', ')}</>}
-    </p>
+    <div className="match-note">
+      <p className="xsmall muted mb-0">
+        <span className="strong">{l.linked_by === 'auto' ? `Why it matched (${matchStrength(l.match_score).toLowerCase()})` : l.linked_by === 'origin' ? 'Where you started following' : 'Linked by you'}</span>
+        {l.linked_by === 'auto' && l.match_reasons.length > 0 && <>: {l.match_reasons.map(humanReason).join(', ')}</>}
+      </p>
+      {l.passages?.map((p, i) => <blockquote key={i} className="fup-quote"><Highlight text={p.text} terms={p.terms} /></blockquote>)}
+    </div>
   )
 }
 

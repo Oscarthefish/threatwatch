@@ -114,6 +114,13 @@ def main() -> None:
     n = reevaluate_all(conn)
     if n:
         log.info("re-checked %d followed items with updated matching rules", n)
+    n = pipeline.clean_stored_text(conn)
+    if n:
+        log.info("decoded leftover HTML entities in %d stored articles", n)
+    from .intel.watch import reassess_all
+    n = reassess_all(conn)
+    if n:
+        log.info("re-assessed %d linked reports with stricter relevance rules", n)
     has_briefing = conn.execute("SELECT 1 FROM briefings LIMIT 1").fetchone()
     conn.close()
     log.info("worker starting; AI %s; interval %d min", "enabled" if s.ai_enabled else "disabled", s.ingest_interval_minutes)

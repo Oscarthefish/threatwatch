@@ -122,3 +122,17 @@ Routes: `/`, `/breaking`, `/intel`, `/vulns`, `/vuln/:cve`, `/soc`, `/apac`, `/a
 Mobile: bottom navigation + “More” sheet; desktop: sidebar. Light/dark/system themes. Generated text is rendered as React text nodes only (no `innerHTML`), citations `[E123]` become links to the evidence.
 
 Service worker: precached app shell; `NetworkFirst` (3 s timeout) cache for authenticated GET API responses → previously viewed and saved content is available offline; cache wiped on sign-out.
+
+
+## Follow-alert relevance (assessment rules v2)
+A linked report's *significance* is judged only on what it says about the followed subject:
+- The sentences naming the subject's identifiers or aliases are found (`intel/text.py`).
+- New names (CVEs, actors, malware, victims, indicators) count as changes only if they appear in those sentences.
+- Broad reports (roundups, CISA KEV catalogue updates, or four or more CVEs or named threats) never contribute other
+  subjects' names; the assessment says how many other items the report covers.
+- A KEV catalogue update that names the followed CVE is recorded as "Added to the CISA KEV catalogue".
+- Exploitation counts only when stated alongside the subject in broad reports.
+
+Stored assessments were recalculated once on upgrade (`reassess_all`, gated by `assess_rules_version`); AI
+assessments and the origin report were left as they were, and each affected watch's timeline records the change.
+Display text is decoded and trimmed at read time (`excerpt`, `date_notes`); publisher titles are never rewritten.

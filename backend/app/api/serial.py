@@ -4,6 +4,7 @@ from __future__ import annotations
 import sqlite3
 
 from ..db import jloads
+from ..intel import text as textutil
 from ..intel.classify import SEVERITY_LABELS
 
 ARTICLE_LIST_COLS = """a.id, a.url, a.title, a.summary_text, a.published_at, a.retrieved_at, a.sections, a.tags, a.severity,
@@ -20,8 +21,10 @@ def article_brief(r: sqlite3.Row | dict) -> dict:
     return {
         "id": d["id"],
         "url": d["url"],
-        "title": d["title"],
-        "excerpt": (d.get("summary_text") or "")[:320],
+        "title": textutil.unescape_all(d["title"]),
+        "excerpt": textutil.excerpt(d.get("summary_text"), 300),
+        "snippet": d.get("snip"),
+        "date_notes": textutil.date_notes(d["title"], d["published_at"], d["retrieved_at"]),
         "ai_summary": ai.get("summary") if ai else None,
         "published_at": d["published_at"],
         "retrieved_at": d["retrieved_at"],

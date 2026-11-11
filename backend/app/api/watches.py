@@ -94,6 +94,13 @@ def detail(watch_id: int, mark_viewed: bool = True, conn: sqlite3.Connection = D
         """SELECT we.article_id, we.status, we.match_score, we.match_reasons, we.significance, we.assessment, we.linked_by, we.linked_at
            FROM watch_evidence we WHERE we.watch_id=? AND we.status IN ('linked','candidate')""", (watch_id,)).fetchall()
     meta = {e["article_id"]: dict(e) | {"match_reasons": jloads(e["match_reasons"])} for e in ev}
+    # The sentence(s) that mention the followed subject: shows exactly why each report matched
+    from ..intel import text as textutil
+    terms = engine.watch_terms(r)
+    if meta and terms:
+        for row in conn.execute(f"SELECT id, title, summary_text, content_text FROM articles WHERE id IN ({','.join('?' * len(meta))})", list(meta)):
+            meta[row["id"]]["passages"] = textutil.passages(f"{row['title']}\n{row['summary_text'] or ''}\n{row['content_text'] or ''}", terms, limit=2)
+            meta[row["id"]]["terms"] = terms
     arts = _list_articles(conn, ids=list(meta), collapse=False, order="new", limit=500)
     w["evidence"] = [a | {"link": meta[a["id"]]} for a in arts if meta[a["id"]]["status"] == "linked"]
     w["candidates"] = [a | {"link": meta[a["id"]]} for a in arts if meta[a["id"]]["status"] == "candidate"]

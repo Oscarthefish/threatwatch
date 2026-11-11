@@ -761,3 +761,83 @@ kbd.key { position: static; display: inline-block; min-width: 22px; text-align: 
 .tour-card kbd.key { font-size: 11px; line-height: 16px; padding: 0 5px; }
 .tour-progress { height: 3px; border-radius: 2px; background: var(--surface-2); margin-top: var(--s-2); overflow: hidden; }
 .tour-progress i { display: block; height: 100%; background: var(--primary); transition: width var(--dur-med) var(--ease); }
+
+/* ====================== Batch 8: clarity pass ====================== */
+/* Identity: a small teal square leads every page's context line */
+.page-head .eyebrow::before, .today-head .eyebrow::before, .doc-head .eyebrow::before { content: ""; width: 6px; height: 6px; background: var(--primary); border-radius: 1px; }
+@media (min-width: 900px) { .page-head h1, .today-head h1 { font-size: 28px; letter-spacing: -.015em; } }
+
+/* Cards: headline leads, metadata steps back */
+.acard .title { font-size: var(--t-lg); line-height: 1.3; letter-spacing: -.005em; margin: 6px 0 var(--s-1); }
+.acard.read .title { color: var(--muted); }
+.acard .excerpt { font-size: var(--t-sm); line-height: 1.5; color: var(--muted); -webkit-line-clamp: 2; max-width: 80ch; }
+.acard .excerpt.snippet { -webkit-line-clamp: 3; color: var(--text); }
+.acard .meta { flex-wrap: wrap; row-gap: 2px; column-gap: var(--s-2); color: var(--faint); }
+.acard .meta .src { color: var(--muted); font-weight: var(--w-semibold); }
+.acard .meta > time::before, .acard .meta > .more-src::before, .acard .meta > .region::before, .acard .meta > .conf::before { content: "·"; margin-right: var(--s-2); color: var(--faint); font-weight: var(--w-regular); }
+.acard .meta .conf { font-size: var(--t-xs); }
+.acard .meta .region { font-weight: var(--w-semibold); color: var(--muted); }
+
+/* Search and match highlighting */
+mark { background: color-mix(in srgb, var(--sev-medium) 24%, transparent); color: inherit; border-radius: 2px; padding: 0 1px; }
+
+/* Date consistency */
+.datewarn { display: inline-flex; align-items: center; font-size: 11px; font-weight: var(--w-semibold); color: var(--warn); border: 1px solid color-mix(in srgb, var(--warn) 45%, var(--border)); border-radius: 4px; padding: 0 5px; line-height: 16px; }
+.datewarn-block { margin: 0 0 var(--s-3); padding: var(--s-2) var(--s-3); font-size: var(--t-sm); border-left: 3px solid var(--warn); background: color-mix(in srgb, var(--warn) 7%, var(--surface)); border-radius: 0 var(--r-sm) var(--r-sm) 0; max-width: var(--measure); }
+
+/* Section headings that say what kind of information follows */
+.kind-head { display: inline-flex; align-items: center; gap: var(--s-2); margin: 0; font-size: var(--t-md); }
+.kind-head svg { width: 18px; height: 18px; flex-shrink: 0; }
+.kind-head.follow svg { color: var(--primary); }
+.kind-head.exploited svg { color: var(--sev-critical); }
+.kind-head.incident svg { color: var(--sev-high); }
+.kind-head .count { font-size: var(--t-xs); font-weight: var(--w-semibold); color: var(--muted); background: var(--surface-2); border-radius: var(--r-pill); padding: 0 7px; line-height: 18px; }
+.section-head .kind-head { font-size: var(--t-lg); }
+ul.plain { list-style: none; margin: 0; padding: 0; }
+
+/* Breaking: incidents lead; followed updates and exploited CVEs in a rail on wide screens */
+.bk-grid { display: grid; gap: var(--s-5); grid-template-columns: minmax(0, 1fr); grid-template-areas: "follow" "inc" "kev"; }
+.bk-follow { grid-area: follow; } .bk-inc { grid-area: inc; } .bk-kev { grid-area: kev; }
+.bk-inc .section-head { margin-bottom: var(--s-1); }
+@media (min-width: 1100px) {
+  .content:has(.bk-grid) { max-width: 1320px; }
+  .bk-grid { grid-template-columns: minmax(0, 1fr) 360px; grid-template-areas: "inc follow" "inc kev"; grid-template-rows: auto 1fr; align-items: start; column-gap: var(--s-5); row-gap: var(--s-4); }
+  .bk-grid:not(:has(.bk-follow)) { grid-template-areas: "inc kev" "inc kev"; }
+}
+.bk-kev .kevrow .r { line-height: 1.5; }
+.bk-bulletins { margin-top: var(--s-3); padding-top: var(--s-3); border-top: var(--hairline); }
+.bk-bulletins li { font-size: var(--t-sm); padding: 3px 0; }
+
+/* Followed-item updates: what changed, the matching sentence, then the report */
+.fups { list-style: none; margin: 0 0 var(--s-2); padding: 0; }
+.fup { padding: var(--s-3) var(--s-2); margin: 0 calc(-1 * var(--s-2)); border-top: var(--hairline); border-radius: var(--r-sm); }
+.fup:first-child { border-top: 0; padding-top: var(--s-1); }
+.fup-title { display: block; font-weight: var(--w-semibold); color: var(--text); line-height: var(--lh-tight); }
+.fup-title:hover { color: var(--primary); text-decoration: none; }
+.fup-change { margin: var(--s-1) 0 0; font-size: var(--t-sm); color: var(--text); }
+.fup-quote { margin: var(--s-2) 0 0; padding: 6px var(--s-3); border-left: 2px solid var(--primary); background: var(--surface-2); border-radius: 0 var(--r-sm) var(--r-sm) 0;
+  font-size: var(--t-sm); color: var(--muted); line-height: 1.5; max-width: var(--measure); }
+.fup-meta { margin: var(--s-2) 0 0; font-size: var(--t-xs); color: var(--muted); }
+.match-note { margin-top: var(--s-2); }
+
+/* Article: rating, and evidence-backed vs playbook steps */
+.panel.rating.s4 { box-shadow: inset 3px 0 0 var(--sev-critical); }
+.panel.rating.s3 { box-shadow: inset 3px 0 0 var(--sev-high); }
+.reasons { list-style: none; margin: 0; padding: 0; max-width: var(--measure); }
+.reasons li { position: relative; padding: 3px 0 3px var(--s-5); }
+.reasons li::before { content: ""; position: absolute; left: 4px; top: .75em; width: 8px; height: 4px; border-left: 2px solid var(--primary); border-bottom: 2px solid var(--primary); transform: rotate(-45deg); }
+.todo-group { display: flex; flex-direction: column; gap: 2px; font-size: var(--t-xs); text-transform: uppercase; letter-spacing: .06em; color: var(--text); margin: var(--s-2) 0 var(--s-2); }
+.todo-group span { text-transform: none; letter-spacing: 0; font-weight: var(--w-regular); color: var(--muted); font-size: var(--t-xs); }
+.todo + .todo-group { margin-top: var(--s-4); padding-top: var(--s-4); border-top: var(--hairline); }
+.todo.playbook li::before { background: transparent; border: 1px solid var(--border-strong); color: var(--muted); }
+.todo.playbook strong { font-weight: var(--w-semibold); }
+.todo.playbook li.urgent::before { background: var(--sev-high); border-color: var(--sev-high); color: var(--surface); }
+.fup-src { display: block; margin-top: var(--s-2); font-size: var(--t-sm); font-weight: var(--w-medium); color: var(--link); line-height: var(--lh-tight); }
+.fup-meta { margin-top: 2px; }
+.search-form { margin-bottom: var(--s-4); padding-bottom: var(--s-4); border-bottom: var(--hairline); }
+/* Phones: keep followed updates short so incidents stay near the top */
+@media (max-width: 1099px) { .bk-follow .fup-quote, .bk-follow .bk-intro { display: none; } }
+mark { color: var(--text); font-weight: var(--w-medium); }
+@media (max-width: 1099px) { .fups.collapsed .fup:nth-child(n+2) { display: none; } }
+@media (min-width: 1100px) { .narrow-only { display: none; } .fups.collapsed .fup:nth-child(n+4) { display: none; } }
+@media (max-width: 639px) { .page-head { flex-direction: column; align-items: stretch; } }

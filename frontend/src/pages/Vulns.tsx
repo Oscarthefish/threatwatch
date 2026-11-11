@@ -2,24 +2,24 @@ import { useInfiniteQuery } from '@tanstack/react-query'
 import { Link, useSearchParams } from 'react-router-dom'
 import { api, qs } from '../api'
 import type { Vuln } from '../types'
-import { ErrorBox, LoadMore, Loading, NoResults, PageHeader } from '../components/ui'
+import { ErrorBox, Highlight, LoadMore, Loading, NoResults, PageHeader } from '../components/ui'
 
 const PAGE = 50
 
 /** One CVE: product first (what you recognise), identifiers and exploitation signals, scores on the right. */
-export function VulnRow({ v }: { v: Vuln }) {
+export function VulnRow({ v, terms }: { v: Vuln; terms?: string[] }) {
   const product = [v.vendor, v.product].filter(Boolean).join(' ')
   return (
     <Link to={`/vuln/${v.cve_id}`} className="vrow" data-nav>
       <div className="grow">
-        <div className="vprod">{product || v.cve_id}</div>
+        <div className="vprod"><Highlight text={product || v.cve_id} terms={terms} /></div>
         <div className="row mt-2">
-          {product && <code className="mono-id">{v.cve_id}</code>}
+          {product && <code className="mono-id"><Highlight text={v.cve_id} terms={terms} /></code>}
           {v.kev && <span className="chip kev">Exploited · KEV {v.kev_date_added}</span>}
           {v.kev_ransomware === 'Known' && <span className="chip kev">Ransomware use</span>}
           {(v.mentions ?? 0) > 0 && <span className="chip">{v.mentions} report{v.mentions === 1 ? '' : 's'}</span>}
         </div>
-        {(v.name || v.description) && <div className="vname clamp-2 mt-2">{v.name || v.description}</div>}
+        {(v.name || v.description) && <div className="vname clamp-2 mt-2"><Highlight text={(v.name || v.description)!} terms={terms} /></div>}
         {!product && !v.name && !v.description && <div className="vname mt-2">Product and description pending from the CVE record</div>}
       </div>
       <dl className="vmetrics">

@@ -23,7 +23,8 @@ from datetime import timedelta
 from ..config import get_settings
 from ..db import iso, jdumps, jloads, now_iso, tx, utcnow
 from . import ai, entities
-from .classify import SEVERITY_LABELS
+from . import text as textutil
+from .classify import EXPLOITED, SEVERITY_LABELS
 from .notify import notify
 
 log = logging.getLogger(__name__)
@@ -396,30 +397,71 @@ def _fmt_entities(new_ents: set[tuple[str, str]]) -> str:
     return f"{shown} and {len(vals) - 3} more" if len(vals) > 3 else shown
 
 
-def _heuristic_assess(e: dict, known_clusters: set[int], known_ents: set[tuple[str, str]], ents: set[tuple[str, str]],
-                      known_sources: set[str]) -> tuple[str, str]:
+_KEV_BULLETIN = re.compile(r"\badds?\b.{0,40}\bknown exploited vulnerabilit", re.I)
+_CHANGE_TYPES = ("cve", "actor", "ransomware", "malware", "victim", *entities.IOC_TYPES)
+
+
+def watch_terms(w: dict) -> list[str]:
+    """The names that identify a followed subject: its identifiers and aliases."""
+    return [t for t in [*jloads(w["identifiers"]), *jloads(w["aliases"])] if t and t.strip()]
+
+
+def _is_broad(e: dict, ents: set[tuple[str, str]]) -> bool:
+    """Bulletins, catalogue updates and roundups cover many unrelated subjects at once."""
+    if "roundup" in set(jloads(e["tags"])) or _KEV_BULLETIN.search(e["title"] or ""):
+        return True
+    cves = sum(1 for t, _ in ents if t == "cve")
+    named = sum(1 for t, _ in ents if t in ("actor", "ransomware", "malware"))
+    return cves >= 4 or named >= 4
+
+
+def _heuristic_assess(e: dict, terms: list[str], known_clusters: set[int], known_ents: set[tuple[str, str]],
+                      ents: set[tuple[str, str]], known_sources: set[str]) -> tuple[str, str]:
+    """Decide what a newly linked report adds to a followed subject.
+
+    Only facts stated alongside the subject count. In a broad bulletin, names that
+    appear elsewhere in the report (other CVEs, other actors) are not changes to
+    this subject, and the assessment says so.
+    """
     tags = set(jloads(e["tags"]))
+    body = f"{e['title']}\n{e.get('summary_text') or ''}\n{e.get('content_text') or ''}"
+    about = textutil.near_text(body, terms) if terms else ""
+    broad = _is_broad(e, ents)
     if "roundup" in tags:
-        # Roundups/newsletters mix unrelated stories: their other entities say nothing about this subject.
         return "minor", "Mentioned in a news roundup or podcast; read it for context."
-    new_ents = {x for x in ents - known_ents if x[0] in ("cve", "actor", "ransomware", "malware", "victim", *entities.IOC_TYPES)}
-    if e["cluster_id"] in known_clusters and not new_ents:
+    own = {t.lower() for t in terms}
+    candidates = {x for x in ents - known_ents if x[0] in _CHANGE_TYPES and x[1].lower() not in own}
+    scope = (about or ("" if broad else body)).lower()
+    relevant = {x for x in candidates if x[1].lower() in scope}
+    unrelated = len(candidates) - len(relevant)
+    if e["cluster_id"] in known_clusters and not relevant:
         return "duplicate", "Same story as a report already on record."
-    reasons = []
-    if new_ents:
-        reasons.append(f"Names {_fmt_entities(new_ents)}")
-    if e["authority"] >= 3 and e["source_name"] not in known_sources:
-        reasons.append(f"First official advisory ({e['source_name']})")
-    if tags & {"exploited", "zero-day"}:
+
+    reasons: list[str] = []
+    important = False
+    kev_listed = bool(_KEV_BULLETIN.search(e["title"] or "") and about)
+    if kev_listed:
+        reasons.append("Added to the CISA KEV catalogue, so exploitation is confirmed")
+        important = e["source_name"] not in known_sources
+    elif (EXPLOITED.search(about) if (broad or about) else tags & {"exploited", "zero-day"}):
         reasons.append("Reports exploitation")
-    joined = ". ".join(reasons) + ("." if reasons else "")
-    if e["severity"] >= 3 and (reasons or e["source_name"] not in known_sources):
-        return "important", joined or f"{SEVERITY_LABELS[e['severity']].capitalize()} severity reporting from a new source."
-    if reasons:
-        return ("important" if any(r.startswith(("First official", "Reports exploitation")) for r in reasons) else "meaningful"), joined
-    if e["source_name"] not in known_sources:
-        return "meaningful", f"Additional independent reporting from {e['source_name']}."
-    return "minor", "No new names, indicators or sources."
+        important = True
+    if relevant:
+        reasons.append(f"Names {_fmt_entities(relevant)} in connection with it")
+    if e["authority"] >= 3 and e["source_name"] not in known_sources and not kev_listed:
+        reasons.append(f"First official source ({e['source_name']})")
+        important = True
+    if not reasons and e["source_name"] not in known_sources:
+        reasons.append(f"Additional independent reporting from {e['source_name']}")
+    note = ""
+    if broad and unrelated:
+        note = f" The report also covers {unrelated} other item{'s' if unrelated != 1 else ''}, not counted as changes to this one."
+    joined = ". ".join(reasons) + "." if reasons else ""
+    if important or (e["severity"] >= 3 and reasons and not broad and relevant):
+        return "important", joined + note
+    if reasons and (relevant or e["source_name"] not in known_sources):
+        return "meaningful", joined + note
+    return "minor", (joined + " " if joined else "") + ("Only a passing mention in a broad report." if broad else "No new names, indicators or sources.") + note
 
 
 def update_record(conn: sqlite3.Connection, watch_id: int, initial: bool = False, force_ai: bool = False) -> dict | None:
@@ -439,7 +481,7 @@ def update_record(conn: sqlite3.Connection, watch_id: int, initial: bool = False
     known_sources = {e["source_name"] for e in old}
     assess: dict[int, tuple[str, str]] = {}
     for e in new:
-        sig, why = _heuristic_assess(e, known_clusters, known_ents, per_article.get(e["article_id"], set()), known_sources)
+        sig, why = _heuristic_assess(e, watch_terms(w), known_clusters, known_ents, per_article.get(e["article_id"], set()), known_sources)
         if initial and not old:
             sig, why = ("meaningful", "Initial evidence when the watch was created.")
         assess[e["article_id"]] = (sig, why)
@@ -544,6 +586,15 @@ def _heuristic_record(w: dict, evidence: list[dict]) -> tuple[str, list[dict], l
     return "\n".join(lines), confirmed[-25:], uncertain[-25:], detection[-10:]
 
 
+def _matched_on(e: dict) -> str:
+    """Short plain statement of why the report was linked, for notification text."""
+    rs = [r for r in jloads(e.get("match_reasons") or "[]") if not r.startswith(("contextual similarity", "AI check"))]
+    if not rs:
+        return ""
+    r = rs[0].replace("'", "")
+    return f" Matched because {r}."
+
+
 def _notify_for(conn, w: dict, new: list[dict], assess: dict[int, tuple[str, str]], version: int) -> None:
     pref = w["notify_pref"]
     if pref == "silent":
@@ -559,7 +610,7 @@ def _notify_for(conn, w: dict, new: list[dict], assess: dict[int, tuple[str, str
             conn,
             kind="watch_important" if sig == "important" else "watch_update",
             title=f"{w['title']}: {'important update' if sig == 'important' else 'new development'}",
-            body=f"{e['title']} ({e['source_name']}). {why}"[:500],
+            body=f"{e['title']} ({e['source_name']}). {why}{_matched_on(e)}"[:500],
             link=f"/watch/{w['id']}",
             watch_id=w["id"],
             article_id=e["article_id"],
@@ -623,3 +674,70 @@ def reevaluate_all(conn: sqlite3.Connection) -> int:
             log.exception("re-evaluating watch %s failed", wid)
     set_setting(conn, "match_rules_version", MATCH_RULES_VERSION)
     return len(ids)
+
+
+ASSESS_RULES_VERSION = 2
+
+
+def reassess_all(conn: sqlite3.Connection) -> int:
+    """Recompute heuristic assessments for stored evidence after the relevance rules change.
+
+    Evidence is replayed in publication order so "new" still means new at the time.
+    AI assessments are left alone. Notification text and the latest heuristic
+    record's change list are corrected to match, and the timeline records that
+    this happened.
+    """
+    from ..db import get_setting, set_setting
+
+    if get_setting(conn, "assess_rules_version", 1) >= ASSESS_RULES_VERSION:
+        return 0
+    changed_total = 0
+    for wrow in conn.execute("SELECT * FROM watches").fetchall():
+        w = dict(wrow)
+        evidence = [e for e in _evidence_rows(conn, w["id"]) if e["processed_at"]]
+        if not evidence:
+            continue
+        _, _, per_article = _collect_structured(conn, evidence)
+        known_clusters: set[int] = set()
+        known_ents: set[tuple[str, str]] = set()
+        known_sources: set[str] = set()
+        changed: dict[int, tuple[str, str]] = {}
+        for i, e in enumerate(evidence):
+            ents = per_article.get(e["article_id"], set())
+            if i == 0 and e["linked_by"] == "origin":
+                sig, why = e["significance"], e["assessment"]
+            elif (e["assessment"] or "").endswith("(AI assessment)"):
+                sig, why = e["significance"], e["assessment"]
+            else:
+                sig, why = _heuristic_assess(e, watch_terms(w), known_clusters, known_ents, ents, known_sources)
+                if i == 0 and e["assessment"] == "Initial evidence when the watch was created.":
+                    sig, why = e["significance"], e["assessment"]
+            if (sig, why) != (e["significance"], e["assessment"]):
+                conn.execute("UPDATE watch_evidence SET significance=?, assessment=? WHERE id=?", (sig, why, e["id"]))
+                changed[e["article_id"]] = (sig, why)
+                conn.execute("UPDATE notifications SET body=? WHERE watch_id=? AND article_id=?",
+                             (f"{e['title']} ({e['source_name']}). {why}{_matched_on(e)}"[:1000], w["id"], e["article_id"]))
+            known_clusters.add(e["cluster_id"])
+            known_ents |= ents
+            known_sources.add(e["source_name"])
+        if not changed:
+            continue
+        changed_total += len(changed)
+        last = conn.execute("SELECT id, method, changes FROM watch_summaries WHERE watch_id=? ORDER BY version DESC LIMIT 1", (w["id"],)).fetchone()
+        if last and last["method"] == "heuristic":
+            titles = {e["article_id"]: e for e in evidence}
+            fixed = []
+            for c in jloads(last["changes"]):
+                ids = c.get("article_ids") or []
+                if ids and ids[0] in changed:
+                    sig, why = changed[ids[0]]
+                    if sig not in ("important", "meaningful"):
+                        continue
+                    e = titles[ids[0]]
+                    c = {"change": f"{e['title']} ({e['source_name']}). {why}", "article_ids": ids}
+                fixed.append(c)
+            conn.execute("UPDATE watch_summaries SET changes=? WHERE id=?", (jdumps(fixed), last["id"]))
+        timeline(conn, w["id"], "summary", "Assessments recalculated",
+                 f"{len(changed)} linked report(s) re-assessed with stricter relevance rules: only facts stated alongside this subject count as changes.")
+    set_setting(conn, "assess_rules_version", ASSESS_RULES_VERSION)
+    return changed_total

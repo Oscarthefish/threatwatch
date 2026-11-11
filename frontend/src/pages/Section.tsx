@@ -2,7 +2,7 @@ import { useInfiniteQuery } from '@tanstack/react-query'
 import { useSearchParams } from 'react-router-dom'
 import { api, qs } from '../api'
 import type { ArticleBrief } from '../types'
-import { ArticleCard, ErrorBox, LoadMore, Loading, NoResults, PageHeader } from '../components/ui'
+import { ArticleCard, ErrorBox, LoadMore, Loading, NoResults, OrderNote, PageHeader } from '../components/ui'
 
 interface Props { section?: string; title: string; sub: string; tags?: [string, string][]; regions?: [string, string][] }
 
@@ -57,7 +57,7 @@ export default function Section({ section, title, sub, tags, regions }: Props) {
           </label>
           <label>Sort
             <select className="input" value={order} onChange={(e) => set('order', e.target.value)}>
-              <option value="rank">Most important</option><option value="new">Newest</option>
+              <option value="rank">Priority</option><option value="new">Newest</option>
             </select>
           </label>
           {filtered && <button type="button" className="btn quiet" onClick={clear}>Clear filters</button>}
@@ -67,7 +67,7 @@ export default function Section({ section, title, sub, tags, regions }: Props) {
         : !items ? <Loading lines={8} />
         : items.length === 0 ? <NoResults filtered={filtered} onClear={clear} />
         : <>
-          <div className="list-meta"><span>{items.length}{q.hasNextPage ? '+' : ''} report{items.length === 1 ? '' : 's'}</span><span>{order === 'rank' ? 'Most important first' : 'Newest first'}</span></div>
+          <div className="list-meta"><span>{items.length}{q.hasNextPage ? '+' : ''} report{items.length === 1 ? '' : 's'}</span><OrderNote order={order} /></div>
           <div className="alist">{items.map((a) => <ArticleCard key={a.id} a={a} />)}</div>
         </>}
       <LoadMore show={!!q.hasNextPage} busy={q.isFetchingNextPage} onClick={() => q.fetchNextPage()} />

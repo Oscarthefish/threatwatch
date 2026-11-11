@@ -22,6 +22,40 @@ export function fmtDate(iso?: string | null): string {
 }
 export const TimeAgo = ({ iso }: { iso?: string | null }) => <time dateTime={iso ?? undefined} title={fmtDate(iso)}>{timeAgo(iso)}</time>
 
+// ------------------------------------------------------------- highlighting
+const escapeRe = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+/** Marks every occurrence of the given terms. Text is rendered as text, never parsed as HTML. */
+export function Highlight({ text, terms }: { text: string; terms?: string[] }) {
+  const ts = [...new Set((terms ?? []).map((t) => t.trim()).filter((t) => t.length > 1))].sort((x, y) => y.length - x.length)
+  if (!ts.length) return <>{text}</>
+  const parts = text.split(new RegExp(`(${ts.map(escapeRe).join('|')})`, 'gi'))
+  return <>{parts.map((p, i) => (i % 2 ? <mark key={i}>{p}</mark> : p))}</>
+}
+const OPEN = String.fromCharCode(2), CLOSE = String.fromCharCode(3)
+/** A search snippet from the server, where matches are wrapped in control characters (\x02 … \x03). */
+export function MarkedText({ text }: { text: string }) {
+  const out: ReactNode[] = []
+  let rest = text, k = 0
+  while (rest) {
+    const i = rest.indexOf(OPEN)
+    if (i === -1) { out.push(rest); break }
+    const j = rest.indexOf(CLOSE, i)
+    out.push(rest.slice(0, i))
+    out.push(<mark key={k++}>{rest.slice(i + 1, j === -1 ? undefined : j)}</mark>)
+    rest = j === -1 ? '' : rest.slice(j + 1)
+  }
+  return <>{out}</>
+}
+/** Query words for client-side highlighting of titles (the server marks the snippet itself). */
+export const queryTerms = (q: string) => (q.match(/[\w.$-]+/g) ?? []).filter((t) => t.length > 1)
+
+/** Shown when the publisher's dates disagree. The title is never changed. */
+export function DateFlag({ notes, full }: { notes?: string[]; full?: boolean }) {
+  if (!notes?.length) return null
+  if (full) return <p className="datewarn-block" role="note"><strong>Date check. </strong>{notes.join(' ')}</p>
+  return <span className="datewarn">Date check<span className="sr-only">: {notes.join(' ')}</span></span>
+}
+
 // -------------------------------------------------------------- severity
 const SEV = ['info', 'low', 'medium', 'high', 'critical']
 /** Severity label. With reasons it becomes a button that reveals why (works on touch; no hover-only info). */
@@ -149,38 +183,53 @@ export function ActionTags({ actions, max = 3 }: { actions?: SocAction[]; max?: 
   )
 }
 
-/** Full next-step guidance with the basis of each step. */
+function Step({ a }: { a: SocAction }) {
+  return (
+    <li className={a.urgent ? 'urgent' : ''}>
+      <div className="row between top nowrap">
+        <strong>{a.label}{a.urgent && <span className="tag-urgent">Urgent</span>}</strong>
+        {a.basis !== 'Playbook' && <span className="basis">{a.basis}</span>}
+      </div>
+      <p>{a.detail}</p>
+    </li>
+  )
+}
+
+/**
+ * Full next-step guidance, grouped by where it comes from: steps backed by the
+ * evidence (the source, CVE record or CISA KEV) first, then general playbook advice.
+ */
 export function ActionList({ actions, ai }: { actions: SocAction[]; ai?: { action: string; rationale: string }[] }) {
   if (!actions.length && !ai?.length) return null
+  const sourced = actions.filter((a) => a.basis !== 'Playbook')
+  const playbook = actions.filter((a) => a.basis === 'Playbook')
+  const aiCount = ai?.length ?? 0
   return (
     <section className="panel" aria-labelledby="todo-h">
       <header><h2 id="todo-h">What to do</h2><span className="xsmall muted">Next steps for the SOC</span></header>
       <div className="body">
-        <ol className="todo">
-          {actions.map((a) => (
-            <li key={a.kind + a.label} className={a.urgent ? 'urgent' : ''}>
-              <div className="row between top">
-                <strong>{a.label}{a.urgent && <span className="tag-urgent">Urgent</span>}</strong>
-                <span className={`basis ${a.basis === 'Playbook' ? 'playbook' : ''}`}>{a.basis}</span>
-              </div>
-              <p>{a.detail}</p>
-            </li>
-          ))}
-          {ai?.map((a, i) => (
-            <li key={`ai${i}`}>
-              <div className="row between top"><strong>{a.action}</strong><span className="basis">AI, from source</span></div>
-              <p>{a.rationale}</p>
-            </li>
-          ))}
-        </ol>
-        <p className="xsmall faint mb-0">“Playbook” steps are standard practice for this type of threat, not claims about this incident. Other steps come directly from the named source.</p>
+        {sourced.length > 0 && <>
+          <h3 className="todo-group">Backed by the evidence<span>Stated by the source, the CVE record or CISA KEV</span></h3>
+          <ol className="todo">{sourced.map((a) => <Step key={a.kind + a.label} a={a} />)}</ol>
+        </>}
+        {aiCount > 0 && <>
+          <h3 className="todo-group">From the source text<span>Summarised by AI; check the original</span></h3>
+          <ol className="todo" style={{ counterReset: `step ${sourced.length}` }}>
+            {ai!.map((a, i) => <li key={`ai${i}`}><strong>{a.action}</strong><p>{a.rationale}</p></li>)}
+          </ol>
+        </>}
+        {playbook.length > 0 && <>
+          <h3 className="todo-group playbook">Standard practice<span>General advice for this kind of threat, not claims about this incident</span></h3>
+          <ol className="todo playbook" style={{ counterReset: `step ${sourced.length + aiCount}` }}>{playbook.map((a) => <Step key={a.kind + a.label} a={a} />)}</ol>
+        </>}
       </div>
     </section>
   )
 }
 
 // ------------------------------------------------------------ article card
-export function ArticleCard({ a, extra }: { a: ArticleBrief; extra?: ReactNode }) {
+export function ArticleCard({ a, extra, terms, showConfidence }: { a: ArticleBrief; extra?: ReactNode; terms?: string[]; showConfidence?: boolean }) {
+  const text = a.ai_summary ?? a.excerpt
   return (
     <article data-nav className={`acard s${a.severity} ${a.read ? 'read' : ''}`}>
       <div className="acard-body">
@@ -188,15 +237,14 @@ export function ArticleCard({ a, extra }: { a: ArticleBrief; extra?: ReactNode }
           <Severity level={a.severity} reasons={a.severity_reasons} />
           <span className="src">{a.source.name}</span>
           <TimeAgo iso={a.published_at} />
+          {showConfidence && (a.confidence === 'official' || a.confidence === 'corroborated') && <Confidence value={a.confidence} />}
+          {a.related_count > 0 && <span className="more-src">+{a.related_count} source{a.related_count > 1 ? 's' : ''}</span>}
+          {a.region && a.region !== 'GLOBAL' && <span className="region">{a.region}</span>}
+          <DateFlag notes={a.date_notes} />
         </div>
-        <Link className="title" data-open to={`/article/${a.id}`}>{a.title}</Link>
-        {(a.ai_summary || a.excerpt) && <p className="excerpt">{a.ai_summary ?? a.excerpt}</p>}
-        {(a.related_count > 0 || (a.region && a.region !== 'GLOBAL')) && (
-          <div className="row xsmall muted mt-2">
-            {a.related_count > 0 && <span>+{a.related_count} more source{a.related_count > 1 ? 's' : ''}</span>}
-            {a.region && a.region !== 'GLOBAL' && <span className="chip">{a.region}</span>}
-          </div>
-        )}
+        <Link className="title" data-open to={`/article/${a.id}`}>{terms ? <Highlight text={a.title} terms={terms} /> : a.title}</Link>
+        {a.snippet ? <p className="excerpt snippet"><MarkedText text={a.snippet} /></p>
+          : text && <p className="excerpt">{terms ? <Highlight text={text} terms={terms} /> : text}</p>}
         <ActionTags actions={a.actions} />
         {extra}
       </div>
@@ -206,6 +254,13 @@ export function ArticleCard({ a, extra }: { a: ArticleBrief; extra?: ReactNode }
       </div>
     </article>
   )
+}
+
+/** One line under a list explaining how it is ordered. */
+export function OrderNote({ order }: { order: string }) {
+  return order === 'new'
+    ? <span>Newest first, by the publisher's date</span>
+    : <span>Priority order: severity first, then how recent, then how many independent sources report it</span>
 }
 
 /** Compact one-line-ish row for dense dashboard lists. */
