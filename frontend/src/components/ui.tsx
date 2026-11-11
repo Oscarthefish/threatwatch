@@ -1,9 +1,9 @@
 import { createContext, useCallback, useContext, useEffect, useId, useRef, useState, type ReactNode } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { api, ApiError } from '../api'
 import type { ArticleBrief } from '../types'
-import { IconBookmark, IconExternal } from './icons'
+import { IconBack, IconBookmark, IconExternal } from './icons'
 
 // ------------------------------------------------------------------ time
 export function timeAgo(iso?: string | null): string {
@@ -193,12 +193,39 @@ export function Cites({ ids }: { ids: number[] }) {
   return <>{ids.map((id) => <Link key={id} className="cite" to={`/article/${id}`}>E{id}</Link>)}</>
 }
 
-export function PageHeader({ title, sub, actions }: { title: string; sub?: ReactNode; actions?: ReactNode }) {
+/** Sets the browser tab / history title: "<page> · Threat Watch". */
+export function usePageTitle(title?: string | null) {
+  useEffect(() => { document.title = title ? `${title} · Threat Watch` : 'Threat Watch' }, [title])
+}
+
+/** Small monospace context line above a page heading, e.g. "SECTION · LAST 72 HOURS". */
+export function Eyebrow({ parts }: { parts: (ReactNode | false | null | undefined)[] }) {
+  const items = parts.filter(Boolean)
+  return <div className="eyebrow">{items.map((p, i) => <span key={i} className="eb">{i > 0 && <span className="sep" aria-hidden="true">/</span>}{p}</span>)}</div>
+}
+
+export function PageHeader({ title, sub, actions, eyebrow }: { title: string; sub?: ReactNode; actions?: ReactNode; eyebrow?: (ReactNode | false | null | undefined)[] }) {
+  usePageTitle(title)
   return (
-    <div className="row between top mb-4">
-      <div className="grow"><h1>{title}</h1>{sub && <p className="muted small measure mb-0">{sub}</p>}</div>
+    <div className="page-head row between top">
+      <div className="grow">
+        {eyebrow && <Eyebrow parts={eyebrow} />}
+        <h1>{title}</h1>
+        {sub && <p className="muted small measure mb-0">{sub}</p>}
+      </div>
       {actions && <div className="row">{actions}</div>}
     </div>
+  )
+}
+
+/** Consistent back affordance: returns to the previous in-app page, or to `fallback` when opened directly. */
+export function BackLink({ fallback, label = 'Back' }: { fallback: string; label?: string }) {
+  const nav = useNavigate()
+  const canGoBack = (window.history.state?.idx ?? 0) > 0
+  return (
+    <a href={fallback} className="back" onClick={(e) => { e.preventDefault(); if (canGoBack) nav(-1); else nav(fallback) }}>
+      <IconBack aria-hidden="true" />{label}
+    </a>
   )
 }
 

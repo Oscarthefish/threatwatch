@@ -3,7 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from '../api'
 import type { ArticleBrief, Claim, WatchDetail, WatchRecord } from '../types'
-import { ArticleCard, CitedText, Cites, copy, Empty, ErrorBox, fmtDate, Loading, TimeAgo, useToast } from '../components/ui'
+import { ArticleCard, BackLink, CitedText, Cites, copy, Empty, ErrorBox, Eyebrow, fmtDate, Loading, TimeAgo, usePageTitle, useToast } from '../components/ui'
 import { IconCopy, IconRefresh } from '../components/icons'
 import { useConfirm } from '../components/Sheet'
 
@@ -59,15 +59,17 @@ export default function WatchPage() {
   const confirm = useConfirm()
   const del = useMutation({ mutationFn: () => api.del(`/api/watches/${id}`), onSuccess: () => { qc.invalidateQueries(); nav('/watch') } })
 
-  if (q.isError) return <ErrorBox error={q.error} />
+  usePageTitle(q.data?.title)
+  if (q.isError) return <><BackLink fallback="/watch" label="Following" /><ErrorBox error={q.error} onRetry={() => q.refetch()} /></>
   if (!q.data) return <Loading lines={10} />
   const w = q.data
   const unseen = (a: ArticleBrief) => w.previous_viewed_at && a.link && a.link.linked_at > w.previous_viewed_at
 
   return (
     <>
-      <div className="row small muted"><Link to="/watch">Threat Watch</Link><span>/</span><span className="chip">{w.kind}</span>{w.status === 'archived' && <span className="chip">archived</span>}</div>
-      <h1 style={{ marginTop: '.4rem' }}>{w.title}</h1>
+      <BackLink fallback="/watch" label="Following" />
+      <Eyebrow parts={[`Following / ${w.kind}`, w.status === 'archived' && 'Archived']} />
+      <h1 className="measure">{w.title}</h1>
       <div className="chips" style={{ marginBottom: '.5rem' }}>
         {w.identifiers.map((x) => <span key={x} className="chip" title="Identifier">{x}</span>)}
         {w.aliases.map((x) => <span key={x} className="chip" title="Alias" style={{ fontStyle: 'italic' }}>{x}</span>)}

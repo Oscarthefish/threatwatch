@@ -11,7 +11,7 @@ export default function Search() {
   const r = useQuery({ queryKey: ['search', q], queryFn: () => api.get<{ articles: ArticleBrief[]; vulnerabilities: Vuln[]; watches: Watch[] }>(`/api/search?q=${encodeURIComponent(q)}`), enabled: q.length >= 2 })
   return (
     <>
-      <PageHeader title="Search" sub="Full-text search across all collected articles, tracked CVEs and your watches" />
+      <PageHeader title="Search" sub="Searches every collected article, tracked CVE and followed item." />
       <form role="search" className="row" style={{ marginBottom: '1rem' }} onSubmit={(e) => { e.preventDefault(); setParams({ q: String(new FormData(e.currentTarget).get('q') ?? '') }) }}>
         <label className="sr-only" htmlFor="sq">Search</label>
         <input id="sq" name="q" className="input grow" defaultValue={q} key={q} placeholder="e.g. CVE-2026-1234, Akira, Citrix, ClickFix" autoFocus />

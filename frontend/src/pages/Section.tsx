@@ -26,7 +26,7 @@ export default function Section({ section, title, sub, tags, regions }: Props) {
 
   return (
     <>
-      <PageHeader title={title} sub={sub} />
+      <PageHeader title={title} sub={sub} eyebrow={['Intelligence', section ? 'Section' : 'All sources']} />
       <div className="stack" style={{ marginBottom: '1rem' }}>
         {tags && <div className="chips" role="group" aria-label="Topic filter">
           <button className={`chip ${!tag ? 'on' : ''}`} onClick={() => set('tag', '')}>All</button>

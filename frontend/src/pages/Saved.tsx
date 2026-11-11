@@ -41,7 +41,7 @@ export default function Saved() {
   const shown = (bm.data ?? []).filter((a) => !tag || a.bookmark?.tags.includes(tag))
   return (
     <>
-      <PageHeader title="Saved" sub="Bookmarks are for reading later. Follows track evolving threats. Saved items are available offline once opened." />
+      <PageHeader title="Saved" eyebrow={['Yours']} sub="Bookmarks are for reading later. Anything you have opened stays readable offline." />
       <div className="tabs" role="tablist">
         {([['bookmarks', 'Bookmarks'], ['following', 'Following'], ['history', 'Reading history']] as [Tab, string][]).map(([t, l]) =>
           <button key={t} role="tab" aria-selected={tab === t} className={tab === t ? 'active' : ''} onClick={() => setTab(t)}>{l}</button>)}

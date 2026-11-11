@@ -1,7 +1,9 @@
 import { useState } from 'react'
 import { api } from '../api'
+import { usePageTitle } from '../components/ui'
 
 export default function Login({ onLogin }: { onLogin: () => void }) {
+  usePageTitle('Sign in')
   const [username, setU] = useState('')
   const [password, setP] = useState('')
   const [err, setErr] = useState<string | null>(null)
@@ -15,7 +17,7 @@ export default function Login({ onLogin }: { onLogin: () => void }) {
   return (
     <div className="login">
       <form className="card" onSubmit={submit} aria-labelledby="login-h">
-        <div className="row" style={{ marginBottom: '1rem' }}><img src="/pwa-192.png" alt="" width={36} height={36} style={{ borderRadius: 8 }} /><h1 id="login-h" style={{ margin: 0 }}>Threat Watch</h1></div>
+        <div className="row mb-4"><img src="/pwa-192.png" alt="" width={36} height={36} className="logo" /><h1 id="login-h" className="mb-0">Threat Watch</h1></div>
         <label className="field"><span>Username</span><input className="input" autoComplete="username" value={username} onChange={(e) => setU(e.target.value)} required autoFocus /></label>
         <label className="field"><span>Password</span><input className="input" type="password" autoComplete="current-password" value={password} onChange={(e) => setP(e.target.value)} required /></label>
         {err && <p className="error" role="alert">{err}</p>}

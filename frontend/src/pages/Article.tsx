@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { Link, useParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from '../api'
 import type { ArticleDetail } from '../types'
-import { ArticleList, BookmarkButton, Confidence, copy, ErrorBox, fmtDate, Loading, Severity, useToast } from '../components/ui'
+import { ArticleList, BackLink, Eyebrow, usePageTitle, BookmarkButton, Confidence, copy, ErrorBox, fmtDate, Loading, Severity, useToast } from '../components/ui'
 import { FollowSheet } from '../components/FollowSheet'
-import { IconBack, IconCopy, IconExternal, IconEye } from '../components/icons'
+import { IconCopy, IconExternal, IconEye } from '../components/icons'
 
 const ENTITY_LABELS: Record<string, string> = {
   cve: 'CVEs', actor: 'Threat actors', ransomware: 'Ransomware', malware: 'Malware & tools', vendor: 'Vendors', product: 'Products',
@@ -16,7 +16,6 @@ const IOC_TYPES = ['ipv4', 'domain', 'url', 'sha256', 'sha1', 'md5']
 
 export default function ArticlePage() {
   const { id = '' } = useParams()
-  const nav = useNavigate()
   const qc = useQueryClient()
   const toast = useToast()
   const [follow, setFollow] = useState(false)
@@ -33,7 +32,8 @@ export default function ArticlePage() {
     onSuccess: () => { toast('Note saved'); setNote(null); qc.invalidateQueries({ queryKey: ['article', id] }) },
   })
 
-  if (q.isError) return <ErrorBox error={q.error} />
+  usePageTitle(q.data?.title)
+  if (q.isError) return <><BackLink fallback="/" /><ErrorBox error={q.error} onRetry={() => q.refetch()} /></>
   if (!q.data) return <Loading lines={10} />
   const a = q.data
   const ents = Object.entries(a.entities).filter(([t]) => !IOC_TYPES.includes(t))
@@ -42,12 +42,13 @@ export default function ArticlePage() {
 
   return (
     <article>
-      <button className="btn ghost" onClick={() => (history.length > 1 ? nav(-1) : nav('/'))} style={{ marginLeft: '-.6rem' }}><IconBack />Back</button>
-      <div className="row small muted" style={{ marginTop: '.5rem' }}>
+      <BackLink fallback="/" />
+      <Eyebrow parts={[a.source.name, fmtDate(a.published_at)]} />
+      <h1 className="measure">{a.title}</h1>
+      <div className="row small muted mb-2">
         <Severity level={a.severity} reasons={a.severity_reasons} /><Confidence value={a.confidence} />
         {a.sections.map((s) => <span key={s} className="chip">{s}</span>)}
       </div>
-      <h1 style={{ marginTop: '.4rem' }}>{a.title}</h1>
       <div className="small muted">
         <strong>{a.source.name}</strong>{a.author && <> · {a.author}</>} · published {fmtDate(a.published_at)} · retrieved {fmtDate(a.retrieved_at)}
       </div>

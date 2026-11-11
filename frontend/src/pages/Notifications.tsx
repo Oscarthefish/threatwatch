@@ -13,7 +13,7 @@ export default function Notifications() {
   if (!q.data) return <Loading />
   return (
     <>
-      <PageHeader title="Notifications" sub={`${q.data.unread} unread`} actions={q.data.unread > 0 && <button className="btn" onClick={() => read.mutate({ all: true })}>Mark all read</button>} />
+      <PageHeader title="Notifications" eyebrow={['Yours']} sub={`${q.data.unread} unread`} actions={q.data.unread > 0 && <button className="btn" onClick={() => read.mutate({ all: true })}>Mark all read</button>} />
       {q.data.items.length === 0 ? <Empty title="No notifications">Followed threats notify you here according to each watch’s preference.</Empty> : (
         <div className="stack">{q.data.items.map((n) => (
           <button key={n.id} className="card" style={{ display: 'block', width: '100%', textAlign: 'left', cursor: 'pointer', opacity: n.read_at ? .7 : 1 }}

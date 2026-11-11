@@ -8,12 +8,12 @@ interface B { articles: ArticleBrief[]; kev_new: Vuln[]; watch_alerts: { watch_i
 
 export default function Breaking() {
   const q = useQuery({ queryKey: ['breaking'], queryFn: () => api.get<B>('/api/breaking'), refetchInterval: 300_000 })
-  if (q.isError) return <ErrorBox error={q.error} />
+  if (q.isError) return <ErrorBox error={q.error} onRetry={() => q.refetch()} />
   if (!q.data) return <Loading lines={8} />
   const d = q.data
   return (
     <>
-      <PageHeader title="Breaking" sub="Significant incidents and actively exploited vulnerabilities from the last 72 hours. Severity and confidence are derived from source evidence — hover a severity for its reasons." />
+      <PageHeader title="Breaking" eyebrow={['Intelligence', 'Last 72 hours']} sub="Significant incidents and actively exploited vulnerabilities. Severity and confidence come from the source evidence; tap a severity to see why." />
       {d.watch_alerts.length > 0 && (
         <section className="card">
           <h2>Important changes to followed items</h2>

@@ -52,7 +52,7 @@ export default function Settings({ onLogout }: { onLogout: () => void }) {
   const s = st.data
   return (
     <>
-      <PageHeader title="Settings & sources" actions={<button className="btn" onClick={logout}>Sign out</button>} />
+      <PageHeader title="Settings" sub="Appearance, collection status and sources." actions={<button className="btn" onClick={logout}>Sign out</button>} />
       <section className="card">
         <h2>Appearance</h2>
         <div className="chips" role="radiogroup" aria-label="Theme">{['system', 'light', 'dark'].map((t) => <button key={t} role="radio" aria-checked={theme === t} className={`chip ${theme === t ? 'on' : ''}`} onClick={() => setTheme(t)}>{t}</button>)}</div>

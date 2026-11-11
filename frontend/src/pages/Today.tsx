@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { api, qs } from '../api'
 import type { BriefingItem, Today as TodayT } from '../types'
-import { ArticleRow, Empty, ErrorBox, fmtDate, Loading, Severity, TimeAgo } from '../components/ui'
+import { ArticleRow, Empty, ErrorBox, Eyebrow, fmtDate, Loading, Severity, TimeAgo, usePageTitle } from '../components/ui'
 import { IconRefresh } from '../components/icons'
 
 const KEY = 'tw-visit-baseline'
@@ -48,6 +48,7 @@ export default function Today() {
   const [open, setOpen] = useState<Set<number>>(new Set())
   const [filter, setFilter] = useState<'all' | 'high'>('all')
   const [showAll, setShowAll] = useState(false)
+  usePageTitle('Today')
   const q = useQuery({
     queryKey: ['today', baseline],
     queryFn: () => api.get<TodayT>(`/api/today${qs({ since: baseline })}`),
@@ -63,7 +64,7 @@ export default function Today() {
     }
   }, [q.data, baseline])
 
-  if (q.isError) return <ErrorBox error={q.error} />
+  if (q.isError) return <ErrorBox error={q.error} onRetry={() => q.refetch()} />
   if (!q.data) return <Loading lines={10} />
   const d = q.data
   const st = d.stats
@@ -82,11 +83,9 @@ export default function Today() {
     <>
       <div className="today-head">
         <div>
-          <h1>{greeting()}</h1>
-          <div className="muted small">
-            {new Date().toLocaleDateString('en-NZ', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'Pacific/Auckland' })}
-            {' · '}last collection <TimeAgo iso={d.last_ingest_at} />
-          </div>
+          <Eyebrow parts={[new Date().toLocaleDateString('en-NZ', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric', timeZone: 'Pacific/Auckland' }), 'Pacific/Auckland']} />
+          <h1>Today</h1>
+          <div className="muted small">{greeting()}. Last collection <TimeAgo iso={d.last_ingest_at} />.</div>
         </div>
         <button className="btn" aria-label="Refresh" onClick={() => q.refetch()} disabled={q.isFetching}><IconRefresh /><span className="lbl">{q.isFetching ? 'Refreshing…' : 'Refresh'}</span></button>
       </div>

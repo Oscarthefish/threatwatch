@@ -44,7 +44,7 @@ export default function Vulns() {
   const stats = query.data?.pages[0]?.stats
   return (
     <>
-      <PageHeader title="Vulnerabilities" sub={stats ? `${stats.total} tracked CVEs · ${stats.kev} in CISA KEV · EPSS for ${stats.with_epss}` : 'CVE, CISA KEV, FIRST EPSS and CVSS'} />
+      <PageHeader title="Vulnerabilities" eyebrow={['Intelligence', 'CVE / KEV / EPSS / CVSS']} sub={stats ? `${stats.total} tracked CVEs · ${stats.kev} in CISA KEV · EPSS for ${stats.with_epss}` : 'CVE, CISA KEV, FIRST EPSS and CVSS'} />
       <div className="stack" style={{ marginBottom: '1rem' }}>
         <form className="row" onSubmit={(e) => { e.preventDefault(); set('q', String(new FormData(e.currentTarget).get('q') ?? '')) }}>
           <label className="sr-only" htmlFor="vq">Filter CVEs</label>

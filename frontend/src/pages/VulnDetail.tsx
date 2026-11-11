@@ -3,7 +3,7 @@ import { Link, useParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { api } from '../api'
 import type { Vuln } from '../types'
-import { ArticleList, Empty, ErrorBox, Loading, PageHeader } from '../components/ui'
+import { ArticleList, BackLink, Empty, ErrorBox, Loading, PageHeader } from '../components/ui'
 import { FollowSheet } from '../components/FollowSheet'
 import { IconExternal } from '../components/icons'
 
@@ -11,12 +11,13 @@ export default function VulnDetail() {
   const { cve = '' } = useParams()
   const [follow, setFollow] = useState(false)
   const q = useQuery({ queryKey: ['vuln', cve], queryFn: () => api.get<Vuln>(`/api/vulnerabilities/${cve}`) })
-  if (q.isError) return <ErrorBox error={q.error} />
+  if (q.isError) return <><BackLink fallback="/vulns" /><ErrorBox error={q.error} onRetry={() => q.refetch()} /></>
   if (!q.data) return <Loading lines={8} />
   const v = q.data
   return (
     <>
-      <PageHeader title={v.cve_id} sub={[v.vendor, v.product].filter(Boolean).join(' · ')} actions={
+      <BackLink fallback="/vulns" />
+      <PageHeader title={v.cve_id} eyebrow={['Vulnerability', v.kev && 'CISA KEV']} sub={[v.vendor, v.product].filter(Boolean).join(' · ')} actions={
         v.watch_id ? <Link className="btn on" to={`/watch/${v.watch_id}`}>Following</Link> : <button className="btn primary" onClick={() => setFollow(true)}>Follow</button>} />
       <div className="card">
         <div className="chips" style={{ marginBottom: '.6rem' }}>

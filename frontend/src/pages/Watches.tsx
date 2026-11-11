@@ -34,8 +34,8 @@ export default function Watches() {
   const q = useQuery({ queryKey: ['watches', status], queryFn: () => api.get<Watch[]>(`/api/watches?status=${status}`) })
   return (
     <>
-      <PageHeader title="Threat Watch" sub="Followed threats, incidents, vulnerabilities, actors and topics. Each has a persistent, versioned intelligence record."
-        actions={<button className="btn primary" onClick={() => setCreate(true)}>New watch</button>} />
+      <PageHeader title="Following" eyebrow={['Yours']} sub="Incidents, vulnerabilities, actors and topics you track. Each keeps a versioned record that updates as new reporting arrives."
+        actions={<button className="btn primary" onClick={() => setCreate(true)}>Follow something</button>} />
       <div className="tabs" role="tablist">
         {['active', 'archived'].map((s) => <button key={s} role="tab" aria-selected={status === s} className={status === s ? 'active' : ''} onClick={() => setStatus(s)}>{s === 'active' ? 'Following' : 'Archived'}</button>)}
       </div>
