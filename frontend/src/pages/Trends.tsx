@@ -2,32 +2,8 @@ import { useSearchParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { api } from '../api'
 import { ErrorBox, Loading, PageHeader } from '../components/ui'
-import { ColumnChart, DataTable, Dumbbells, RankBars, type Column, type Series } from '../components/charts'
-
-interface Ent { type: string; name: string; query: string | null; tag: string | null; cur: number; prev: number; share: number; weekly: number[] }
-interface Move extends Ent { prev_share: number; change: number }
-interface T {
-  days: number; bucket_days: number; period_start: string; previous_start: string; coverage_start: string
-  current_partial: boolean; comparison_indicative: boolean
-  totals: { current: Record<string, number>; previous: Record<string, number> }
-  volume: { start: string; end: string; critical: number; high: number; other: number; partial: boolean }[]
-  weeks: { start: string; end: string }[]
-  groups: Ent[]; malware: Ent[]; vendors: Ent[]; topics: Ent[]; rising: Move[]; falling: Move[]
-  kev: { weekly: { start: string; count: number }[]; current: number; previous: number; ransomware: number; vendors: { name: string; cur: number; prev: number }[] }
-}
-
-const TYPE: Record<string, string> = { actor: 'Threat actor', ransomware: 'Ransomware', malware: 'Malware', vendor: 'Vendor', topic: 'Topic' }
-const SEV: Series[] = [
-  { key: 'other', label: 'Medium and below', color: 'var(--viz-other)' },
-  { key: 'high', label: 'High', color: 'var(--viz-high)' },
-  { key: 'critical', label: 'Critical', color: 'var(--viz-crit)' },
-]
-const KEV: Series[] = [{ key: 'count', label: 'KEV additions', color: 'var(--viz-accent)' }]
-
-const day = (iso: string) => new Date(`${iso}T00:00:00`).toLocaleDateString('en-NZ', { day: 'numeric', month: 'short' })
-const longDay = (iso: string) => new Date(`${iso}T00:00:00`).toLocaleDateString('en-NZ', { day: 'numeric', month: 'short', year: 'numeric' })
-const pct = (n: number, d: number) => (d ? Math.round((100 * n) / d) : 0)
-const href = (e: Ent) => (e.tag ? `/latest?tag=${encodeURIComponent(e.tag)}` : `/search?q=${encodeURIComponent(e.query ?? e.name)}`)
+import { ColumnChart, DataTable, Dumbbells, RankBars, type Column } from '../components/charts'
+import { day, href, KEV, longDay, pct, SEV, TYPE, type TrendData as T } from '../components/trendsData'
 
 export default function Trends() {
   const [params, setParams] = useSearchParams()

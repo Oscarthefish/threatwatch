@@ -916,3 +916,9 @@ mark { color: var(--text); font-weight: var(--w-medium); }
 }
 .rank-legend i.tick { width: 2px; height: 12px; border-radius: 1px; background: var(--viz-before); }
 .rank-legend i.line { width: 12px; height: 2px; border-radius: 1px; background: var(--viz-before); }
+/* Today: compact trends */
+.trends-mini .rank li, .trends-mini .dumb li { grid-template-columns: minmax(0, 7.5rem) minmax(0, 1fr) 3.6rem; padding: 4px 0; }
+.trends-mini .viz-legend { margin-bottom: var(--s-1); }
+.trends-mini .viz-table summary { min-height: 36px; }
+.rank-val { white-space: nowrap; }
+.trends-mini .dumb li { grid-template-columns: minmax(0, 7.5rem) minmax(0, 1fr) 4.4rem; }

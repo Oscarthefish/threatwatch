@@ -5,6 +5,8 @@ import { api, qs } from '../api'
 import type { BriefingItem, Today as TodayT } from '../types'
 import { ActionTags, ArticleRow, Empty, ErrorBox, Eyebrow, fmtDate, Loading, Severity, TimeAgo, usePageTitle } from '../components/ui'
 import { IconRefresh } from '../components/icons'
+import { ColumnChart, DataTable, Dumbbells, RankBars, type Column } from '../components/charts'
+import { day, href, longDay, SEV, TYPE, type TrendData } from '../components/trendsData'
 
 const KEY = 'tw-visit-baseline'
 const store = {
@@ -47,6 +49,40 @@ function BriefItem({ it, n, open, onToggle }: { it: BriefingItem; n: number; ope
         )}
       </div>
     </div>
+  )
+}
+
+/** Compact view of /trends: volume, biggest movers and most active groups. Loads on its own so Today never waits for it. */
+function TrendsPanel() {
+  const q = useQuery({ queryKey: ['trends', 30], queryFn: () => api.get<TrendData>('/api/trends?days=30'), staleTime: 600_000 })
+  const t = q.data
+  const cols: Column[] = (t?.volume ?? []).map((v) => ({
+    label: day(v.start), title: longDay(v.start), partial: v.partial, values: { critical: v.critical, high: v.high, other: v.other },
+  }))
+  const moves = t ? [...t.rising.slice(0, 3), ...t.falling.slice(0, 2)] : []
+  return (
+    <section className="panel trends-mini" aria-labelledby="trend-h">
+      <header><h2 id="trend-h">Trends, last 30 days</h2><Link to="/trends">All trends</Link></header>
+      <div className="body">
+        {q.isError ? <p className="small muted mb-0">Trends could not be loaded. <button type="button" className="link" onClick={() => q.refetch()}>Try again</button></p>
+          : !t ? <Loading lines={4} /> : <>
+          <h3 className="mini-h mt-0">Stories per day by severity</h3>
+          <ColumnChart columns={cols} series={SEV} label="Stories per day by severity, last 30 days" height={120} partialNote="Incomplete" />
+          <DataTable caption="Stories per day by severity" head={['Day', 'Critical', 'High', 'Medium and below', 'Complete']}
+            rows={t.volume.map((v, i) => [cols[i].title, v.critical, v.high, v.other, v.partial ? 'No' : 'Yes'])} />
+          {moves.length > 0 && <>
+            <h3 className="mini-h">Biggest movers <span className="faint">(share of stories{t.comparison_indicative ? ', indicative' : ''})</span></h3>
+            <Dumbbells rows={moves.map((m) => ({ key: m.type + m.name, name: m.name, sub: TYPE[m.type], before: m.prev_share, now: m.share, href: href(m) }))} />
+            <p className="xsmall muted mb-0 mt-2"><span className="key before" aria-hidden="true" /> previous 30 days <span className="key now" aria-hidden="true" /> last 30 days</p>
+          </>}
+          {t.groups.length > 0 && <>
+            <h3 className="mini-h">Most active threat groups</h3>
+            <RankBars rows={t.groups.slice(0, 3).map((e) => ({ key: e.type + e.name, name: e.name, sub: TYPE[e.type], value: e.cur, prev: e.prev, href: href(e) }))}
+              unit="stories" nowLabel="Stories, last 30 days" prevLabel="Previous 30 days" />
+          </>}
+        </>}
+      </div>
+    </section>
   )
 }
 
@@ -165,6 +201,8 @@ export default function Today() {
               </p>}
             </div>
           </section>
+
+          <TrendsPanel />
 
           <section className="panel" aria-labelledby="kev-h">
             <header><h2 id="kev-h">New in CISA KEV</h2><Link to="/vulns?kev=1">All KEV</Link></header>

@@ -157,3 +157,5 @@ characters, which the client turns into elements; nothing is parsed as HTML.
   white, dark `#d64545`/`#c98500` on `#14171b`); single series use the brand teal; grey is the de-emphasis neutral.
 - **Access:** legends for 2+ series, hover and keyboard tooltips (arrow keys, announced via a live region), and a
   "Show as a table" view under every chart. 0 axe violations at 390 / 768 / 1440 px in both themes.
+- **Today panel:** "Trends, last 30 days" in Today's right column (stories per day by severity, the five biggest movers,
+  the three most active groups) shares the `/trends` query cache and loads independently of the rest of Today.
