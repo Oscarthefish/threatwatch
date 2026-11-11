@@ -110,3 +110,15 @@ def test_untrusted_wrapper_cannot_be_closed():
 def test_ai_disabled_raises(conn):
     with pytest.raises(ai.AIUnavailable):
         ai.summarise_article(conn, {"id": 1, "title": "t", "summary_text": "s", "content_text": ""})
+
+
+def test_double_escaped_entities():
+    assert html_to_text("tracked as (&amp;quot;SSHole&amp;quot;) &amp;amp; more") == 'tracked as ("SSHole") & more'
+
+
+def test_briefing_excerpt_drops_publisher_truncation():
+    from app.intel.briefing import _excerpt
+    assert _excerpt("First sentence about the flaw is here and it is long enough. OpenSSH is t…") == \
+        "First sentence about the flaw is here and it is long enough."
+    assert _excerpt("Complete short summary") == "Complete short summary."
+    assert "appeared first" not in _excerpt("Story text. The post Story appeared first on Example.")

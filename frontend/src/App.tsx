@@ -50,6 +50,8 @@ export default function App() {
         <Route path="/apac" element={<Section section="nz-apac" title="New Zealand & APAC"
           sub="NCSC NZ advisories, Australian and regional developments"
           regions={[['NZ', 'New Zealand'], ['AU', 'Australia'], ['APAC', 'Wider APAC']]} />} />
+        <Route path="/latest" element={<Section title="Latest" sub="Everything collected, newest first or by importance"
+          tags={[['exploited', 'Exploited'], ['incident', 'Incidents'], ['vulnerability', 'Vulnerabilities'], ['ransomware', 'Ransomware'], ['detection', 'Detection & hunting']]} />} />
         <Route path="/vulns" element={<Vulns />} />
         <Route path="/vuln/:cve" element={<VulnDetail />} />
         <Route path="/article/:id" element={<ArticlePage />} />

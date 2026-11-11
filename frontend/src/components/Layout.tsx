@@ -71,7 +71,7 @@ export function Layout({ children }: { children: ReactNode }) {
           </Link>
           <button className="btn icon ghost" aria-label="Toggle dark mode" onClick={() => setTheme(dark ? 'light' : 'dark')}>{dark ? <IconSun /> : <IconMoon />}</button>
         </header>
-        <main className="content" id="main">{children}</main>
+        <main className={`content ${loc.pathname === '/' ? 'wide' : ''}`} id="main">{children}</main>
       </div>
       <nav className="bottomnav" aria-label="Main">
         {mobile.map((n) => <NavLink key={n.to} to={n.to} end={n.end}><n.icon /><span>{n.label === 'Vulnerabilities' ? 'Vulns' : n.label === 'Threat Watch' ? 'Watch' : n.label}</span></NavLink>)}

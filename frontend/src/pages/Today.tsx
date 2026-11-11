@@ -1,75 +1,203 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
-import { api } from '../api'
-import type { Today as TodayT } from '../types'
-import { ArticleCard, ArticleList, Empty, ErrorBox, fmtDate, Loading, PageHeader, Severity, TimeAgo } from '../components/ui'
+import { api, qs } from '../api'
+import type { BriefingItem, Today as TodayT } from '../types'
+import { ArticleRow, Empty, ErrorBox, fmtDate, Loading, Severity, TimeAgo } from '../components/ui'
+import { IconRefresh } from '../components/icons'
+
+const KEY = 'tw-visit-baseline'
+const store = {
+  get: () => { try { return sessionStorage.getItem(KEY) } catch { return null } },
+  set: (v: string) => { try { sessionStorage.setItem(KEY, v) } catch { /* unavailable */ } },
+}
+
+function greeting() {
+  const h = Number(new Intl.DateTimeFormat('en-NZ', { hour: 'numeric', hourCycle: 'h23', timeZone: 'Pacific/Auckland' }).format(new Date()))
+  return h < 5 ? 'Good evening' : h < 12 ? 'Good morning' : h < 18 ? 'Good afternoon' : 'Good evening'
+}
+
+function Tile({ to, n, label, sub, tone }: { to: string; n: number | string; label: string; sub?: string; tone?: string }) {
+  const cls = `tile ${tone ?? ''} ${n === 0 ? 'zero' : ''}`
+  const inner = <><div className="l">{label}</div><div className="n">{n}</div>{sub && <div className="s" title={sub}>{sub}</div>}</>
+  return to.startsWith('#') ? <a href={to} className={cls}>{inner}</a> : <Link to={to} className={cls}>{inner}</Link>
+}
+
+function BriefItem({ it, n, open, onToggle }: { it: BriefingItem; n: number; open: boolean; onToggle: () => void }) {
+  const lead = it.sources?.[0]
+  return (
+    <div className="bitem">
+      <span className="num">{n}</span>
+      <div style={{ minWidth: 0 }}>
+        <button className="bt" aria-expanded={open} onClick={onToggle}>{it.title}</button>
+        {it.summary && <p className="bs">{it.summary}</p>}
+        <div className="bm">
+          <Severity level={it.priority} />
+          {(it.sources ?? []).slice(0, 4).map((s) => <Link key={s.id} className="cite" to={`/article/${s.id}`} title={s.title}>{s.source.name}</Link>)}
+          {(it.sources?.length ?? 0) > 4 && <span className="faint">+{(it.sources?.length ?? 0) - 4}</span>}
+          {lead && <span className="faint"><TimeAgo iso={lead.published_at} /></span>}
+        </div>
+        {open && it.why_it_matters && <p className="why"><strong>Why it matters: </strong>{it.why_it_matters}</p>}
+      </div>
+    </div>
+  )
+}
 
 export default function Today() {
-  const q = useQuery({ queryKey: ['today'], queryFn: () => api.get<TodayT>('/api/today'), refetchInterval: 300_000 })
+  const [baseline, setBaseline] = useState<string | null>(store.get)
+  const [open, setOpen] = useState<Set<number>>(new Set())
+  const [filter, setFilter] = useState<'all' | 'high'>('all')
+  const [showAll, setShowAll] = useState(false)
+  const q = useQuery({
+    queryKey: ['today', baseline],
+    queryFn: () => api.get<TodayT>(`/api/today${qs({ since: baseline })}`),
+    refetchInterval: 300_000,
+  })
+
+  // First load this session: pin the baseline so "since last visit" stays stable while you read, then record the visit.
   useEffect(() => {
-    // Mark the visit after the user has had a chance to see "since last visit".
-    const t = window.setTimeout(() => { api.post('/api/visit').catch(() => {}) }, 15_000)
-    return () => window.clearTimeout(t)
-  }, [])
+    if (q.data && !baseline) {
+      store.set(q.data.baseline)
+      setBaseline(q.data.baseline)
+      api.post('/api/visit').catch(() => {})
+    }
+  }, [q.data, baseline])
+
   if (q.isError) return <ErrorBox error={q.error} />
-  if (!q.data) return <Loading lines={8} />
+  if (!q.data) return <Loading lines={10} />
   const d = q.data
+  const st = d.stats
   const b = d.briefing
+  const since = d.since_last_visit.articles.filter((a) => filter === 'all' || a.severity >= 3)
+  const shown = showAll ? since : since.slice(0, 8)
+  const allOpen = b ? open.size === b.items.length : false
+
+  function markSeen() {
+    const now = new Date().toISOString()
+    store.set(now); setBaseline(now); setShowAll(false)
+    api.post('/api/visit').catch(() => {})
+  }
+
   return (
     <>
-      <PageHeader title="Today" sub={<>Last collection <TimeAgo iso={d.last_ingest_at} />{d.last_visit_at && <> · last visit <TimeAgo iso={d.last_visit_at} /></>}</>} />
-
-      <section className="card" aria-labelledby="brief-h">
-        <div className="row between">
-          <h2 id="brief-h" style={{ margin: 0 }}>Daily briefing</h2>
-          {b && <span className="small faint">{b.date} · generated {fmtDate(b.generated_at)}</span>}
-        </div>
-        {!b && <Empty title="No briefing yet">The first briefing is generated after initial collection, then daily at 7:00 AM NZ time.</Empty>}
-        {b && <>
-          <div className={`notice ${b.method === 'ai' ? 'ai' : ''}`} style={{ margin: '.6rem 0' }}>
-            {b.method === 'ai'
-              ? <>AI-generated synthesis ({b.model}). Every item links to its source evidence — verify before acting.</>
-              : <>Ranked from source reporting (AI synthesis not configured). Summaries are the publishers’ own text{d.ai_enabled ? '' : ''}.</>}
+      <div className="today-head">
+        <div>
+          <h1>{greeting()}</h1>
+          <div className="muted small">
+            {new Date().toLocaleDateString('en-NZ', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'Pacific/Auckland' })}
+            {' · '}last collection <TimeAgo iso={d.last_ingest_at} />
           </div>
-          {b.headline && <p style={{ fontWeight: 600 }}>{b.headline}</p>}
-          {b.items.map((it, i) => (
-            <div key={i} className="brief-item">
-              <div className="row"><Severity level={it.priority} /><strong className="grow">{it.title}</strong></div>
-              <p style={{ margin: '.35rem 0' }}>{it.summary}</p>
-              {it.why_it_matters && <p className="why"><strong>Why it matters: </strong>{it.why_it_matters}</p>}
-              <div className="chips">{(it.sources ?? []).map((s) => <Link key={s.id} className="cite" to={`/article/${s.id}`} title={s.title}>{s.source.name}</Link>)}</div>
+        </div>
+        <button className="btn" aria-label="Refresh" onClick={() => q.refetch()} disabled={q.isFetching}><IconRefresh /><span className="lbl">{q.isFetching ? 'Refreshing…' : 'Refresh'}</span></button>
+      </div>
+
+      <div className="tiles">
+        <Tile to="#since" n={st.new_since_visit} label="New for you" sub={d.last_visit_at ? `since ${timeOrDate(d.baseline)}` : 'last 24 hours'} />
+        <Tile to="/breaking" n={st.critical_24h} label="Critical · 24h" tone="crit" sub={`of ${st.total_24h} stories`} />
+        <Tile to="/breaking" n={st.high_24h} label="High · 24h" tone="high" />
+        <Tile to="/vulns?kev=1" n={st.kev_7d} label="New KEV · 7d" tone="crit" sub="confirmed exploitation" />
+        <Tile to="/watch" n={st.watch_updates} label="Watch updates" sub={st.review_queue ? `${st.review_queue} to review · ${st.watching} followed` : `${st.watching} followed`} tone={st.review_queue ? 'warn' : ''} />
+        <Tile to="/settings" n={`${st.sources_ok}/${st.sources_total}`} label="Sources OK" tone={st.sources_failing.length ? 'warn' : ''}
+          sub={st.sources_failing.length ? `failing: ${st.sources_failing.join(', ')}` : 'all collecting'} />
+      </div>
+
+      <div className="today-grid">
+        <div>
+          <section className="panel" aria-labelledby="brief-h">
+            <header>
+              <h2 id="brief-h">Daily briefing</h2>
+              {b && <button className="link" onClick={() => setOpen(allOpen ? new Set() : new Set(b.items.map((_, i) => i)))}>{allOpen ? 'Collapse all' : 'Expand all'}</button>}
+            </header>
+            <div className="body">
+              {!b ? <Empty title="No briefing yet">The first briefing is generated after the initial collection, then daily at 7:00 AM NZ time.</Empty> : <>
+                {b.headline && <p style={{ fontWeight: 600, marginBottom: '.2rem' }}>{b.headline}</p>}
+                <p className="small faint" style={{ marginBottom: '.4rem' }}>
+                  {b.date} · {fmtDate(b.generated_at)} · {b.method === 'ai' ? `AI synthesis (${b.model}) — verify against sources` : 'ranked from source reporting; summaries are publishers’ text'}
+                </p>
+                {b.items.map((it, i) => <BriefItem key={i} it={it} n={i + 1} open={open.has(i)}
+                  onToggle={() => setOpen((s) => { const n = new Set(s); if (n.has(i)) n.delete(i); else n.add(i); return n })} />)}
+              </>}
             </div>
-          ))}
-          {b.kev_new?.length > 0 && <>
-            <div className="divider" />
-            <h3>New CISA KEV additions</h3>
-            <ul className="claims">{b.kev_new.map((k) => <li key={k.cve_id}><Link to={`/vuln/${k.cve_id}`}><code>{k.cve_id}</code></Link> — {k.vendor} {k.product}: {k.name}</li>)}</ul>
-          </>}
-        </>}
-      </section>
+          </section>
 
-      {d.watch_updates.length > 0 && (
-        <section className="section">
-          <div className="section-head"><h2>Followed threats with new developments</h2><Link to="/watch" className="small">All watches</Link></div>
-          <div className="stack">{d.watch_updates.map((w) => (
-            <Link key={w.id} to={`/watch/${w.id}`} className="card row" style={{ color: 'inherit', textDecoration: 'none' }}>
-              <span className="chip">{w.kind}</span><strong className="grow">{w.title}</strong>
-              {w.important > 0 && <span className="sig important">{w.important} important</span>}
-              <span className="small muted">{w.new_evidence} new</span>
-            </Link>))}</div>
-        </section>
-      )}
+          <section className="panel" id="since" aria-labelledby="since-h">
+            <header>
+              <h2 id="since-h">Since your last visit <span className="muted small" style={{ fontWeight: 500 }}>({d.since_last_visit.count})</span></h2>
+              <div className="row" style={{ gap: '.6rem' }}>
+                <div className="seg" role="group" aria-label="Filter">
+                  <button className={filter === 'all' ? 'on' : ''} aria-pressed={filter === 'all'} onClick={() => setFilter('all')}>All</button>
+                  <button className={filter === 'high' ? 'on' : ''} aria-pressed={filter === 'high'} onClick={() => setFilter('high')}>High+</button>
+                </div>
+                {d.since_last_visit.count > 0 && <button className="link" onClick={markSeen}>Mark all seen</button>}
+              </div>
+            </header>
+            <div className="body">
+              {since.length === 0 ? <Empty title="You’re up to date">{filter === 'high' ? 'No new high or critical stories.' : 'Nothing new since your last visit.'}</Empty> : <>
+                {shown.map((a) => <ArticleRow key={a.id} a={a} />)}
+                <div className="row between small" style={{ marginTop: '.5rem' }}>
+                  {since.length > 8 ? <button className="link" onClick={() => setShowAll(!showAll)}>{showAll ? 'Show fewer' : `Show all ${since.length}`}</button> : <span />}
+                  <Link to="/latest">Browse all latest →</Link>
+                </div>
+              </>}
+            </div>
+          </section>
+        </div>
 
-      <section className="section">
-        <div className="section-head"><h2>Since your last visit</h2><span className="small muted">{d.since_last_visit.count} new stor{d.since_last_visit.count === 1 ? 'y' : 'ies'}</span></div>
-        <ArticleList items={d.since_last_visit.articles} empty={<Empty title="You’re up to date">Nothing new since your last visit.</Empty>} />
-      </section>
+        <div>
+          <section className="panel" aria-labelledby="watch-h">
+            <header><h2 id="watch-h">Followed threats</h2><Link to="/watch">All</Link></header>
+            <div className="body">
+              {d.watch_updates.length > 0 ? d.watch_updates.map((w) => (
+                <Link key={w.id} to={`/watch/${w.id}`} className="kevrow">
+                  <span className="chip">{w.kind}</span>
+                  <span className="p grow">{w.title}</span>
+                  <span className="r">{w.important > 0 && <span className="sig important">{w.important} important</span>} {w.new_evidence} new</span>
+                </Link>
+              )) : <p className="small muted" style={{ margin: 0 }}>
+                {st.watching ? `No new developments on your ${st.watching} followed item${st.watching === 1 ? '' : 's'}.` : <>Not following anything yet. Open an article and tap <strong>Follow</strong> to track an incident, CVE or actor.</>}
+                {st.review_queue > 0 && <> <Link to="/watch">{st.review_queue} item{st.review_queue === 1 ? '' : 's'} awaiting review.</Link></>}
+              </p>}
+            </div>
+          </section>
 
-      <section className="section">
-        <div className="section-head"><h2>Top-priority threats (72h)</h2><Link to="/breaking" className="small">Breaking</Link></div>
-        {d.top_threats.length ? <div className="alist">{d.top_threats.map((a) => <ArticleCard key={a.id} a={a} />)}</div> : <Empty title="No high-severity reporting in the last 72 hours" />}
-      </section>
+          <section className="panel" aria-labelledby="kev-h">
+            <header><h2 id="kev-h">New in CISA KEV</h2><Link to="/vulns?kev=1">All KEV</Link></header>
+            <div className="body">
+              {d.kev_new.length === 0 ? <p className="small muted" style={{ margin: 0 }}>No additions in the last 7 days.</p> : d.kev_new.map((v) => (
+                <Link key={v.cve_id} to={`/vuln/${v.cve_id}`} className="kevrow">
+                  <div className="grow" style={{ minWidth: 0 }}>
+                    <div className="p">{[v.vendor, v.product].filter(Boolean).join(' ')}</div>
+                    <code>{v.cve_id}</code>{v.kev_ransomware === 'Known' && <span className="chip kev" style={{ marginLeft: '.35rem' }}>ransomware</span>}
+                  </div>
+                  <div className="r">{v.kev_date_added}<br />{v.epss != null ? `EPSS ${(v.epss * 100).toFixed(1)}%` : ''}{v.cvss_score != null ? ` · ${v.cvss_score}` : ''}</div>
+                </Link>
+              ))}
+            </div>
+          </section>
+
+          <section className="panel" aria-labelledby="apac-h">
+            <header><h2 id="apac-h">New Zealand & APAC</h2><Link to="/apac">More</Link></header>
+            <div className="body">
+              {d.regional.length === 0 ? <p className="small muted" style={{ margin: 0 }}>No regional reporting in the last 14 days.</p> : d.regional.map((a) => <ArticleRow key={a.id} a={a} />)}
+            </div>
+          </section>
+
+          {d.top_threats.length > 0 && (
+            <section className="panel" aria-labelledby="top-h">
+              <header><h2 id="top-h">Also high priority (72h)</h2><Link to="/breaking">Breaking</Link></header>
+              <div className="body">{d.top_threats.map((a) => <ArticleRow key={a.id} a={a} />)}</div>
+            </section>
+          )}
+        </div>
+      </div>
     </>
   )
+}
+
+function timeOrDate(iso: string) {
+  const d = new Date(iso)
+  const sameDay = d.toDateString() === new Date().toDateString()
+  return sameDay
+    ? d.toLocaleTimeString('en-NZ', { hour: 'numeric', minute: '2-digit', timeZone: 'Pacific/Auckland' })
+    : d.toLocaleDateString('en-NZ', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'Pacific/Auckland' })
 }

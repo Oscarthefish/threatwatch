@@ -4,7 +4,7 @@ import { api, qs } from '../api'
 import type { ArticleBrief } from '../types'
 import { ArticleCard, Empty, ErrorBox, Loading, PageHeader } from '../components/ui'
 
-interface Props { section: string; title: string; sub: string; tags?: [string, string][]; regions?: [string, string][] }
+interface Props { section?: string; title: string; sub: string; tags?: [string, string][]; regions?: [string, string][] }
 
 export default function Section({ section, title, sub, tags, regions }: Props) {
   const [params, setParams] = useSearchParams()

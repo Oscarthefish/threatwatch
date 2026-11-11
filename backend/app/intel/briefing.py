@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import logging
+import re
 import sqlite3
 from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
@@ -41,6 +42,37 @@ def _cached_summary(conn, article_id: int) -> dict | None:
         "SELECT output_json FROM ai_outputs WHERE kind='article_summary' AND subject_type='article' AND subject_id=? ORDER BY id DESC LIMIT 1",
         (article_id,)).fetchone()
     return jloads(r[0], {}) if r else None
+
+
+_TRAIL = re.compile(r"\s*(\[(…|\.\.\.)\]|…|The post .*? appeared first on .*)$", re.S)
+
+
+def _excerpt(text: str, limit: int = 260) -> str:
+    """Lead sentence(s) of a feed excerpt: drop '[…]' / 'The post … appeared first on …' boilerplate and any
+    sentence fragment the publisher's own truncation left behind ("… OpenSSH is t…")."""
+    t = " ".join(text.split())
+    truncated = bool(re.search(r"(\[(…|\.\.\.)\]|…|\.\.\.)$", t)) or len(t) > limit
+    t = _TRAIL.sub("", t).rstrip(" .…")
+    if not truncated:
+        return t + ("" if t.endswith((".", "!", "?")) else ".")
+    cut = t[:limit]
+    dot = max(cut.rfind(". "), cut.rfind("? "), cut.rfind("! "))
+    return cut[: dot + 1] if dot > 25 else cut.rsplit(" ", 1)[0] + " …"
+
+
+def _kev_summary(conn, a: dict) -> str | None:
+    """CISA 'Adds N KEVs' posts say nothing in the title — name the CVEs from structured KEV data."""
+    if not a["title"].lower().startswith("cisa adds"):
+        return None
+    rows = conn.execute(
+        """SELECT v.cve_id, v.vendor, v.product, v.kev_ransomware FROM article_entities ae JOIN entities e ON e.id=ae.entity_id
+           JOIN vulnerabilities v ON v.cve_id=upper(e.normalized) WHERE ae.article_id=? AND e.type='cve' AND v.kev=1""",
+        (a["id"],)).fetchall()
+    if not rows:
+        return None
+    return "Added to KEV: " + "; ".join(
+        f"{r['cve_id']} ({r['vendor']} {r['product']}{', known ransomware use' if r['kev_ransomware'] == 'Known' else ''})"
+        for r in rows[:5]) + "."
 
 
 def generate(conn: sqlite3.Connection, hours: int = 24, notify_user: bool = True) -> int:
@@ -87,14 +119,25 @@ def generate(conn: sqlite3.Connection, hours: int = 24, notify_user: bool = True
             s = _cached_summary(conn, a["id"])
             items.append({
                 "title": a["title"],
-                "summary": (s or {}).get("summary") or (a["summary_text"] or "")[:400],
+                "summary": (s or {}).get("summary") or _kev_summary(conn, a) or _excerpt(a["summary_text"] or ""),
                 "why_it_matters": (s or {}).get("why_it_matters") or "; ".join(jloads(a["severity_reasons"])),
                 "priority": SEVERITY_LABELS[a["severity"]] if a["severity"] >= 1 else "low",
                 "article_ids": _cluster_ids(conn, a["id"]),
                 "method": "ai-article" if s else "source",
             })
-        headline = (f"{len(cands)} notable reports in the last {hours if since else 24} hours"
-                    + (f"; {len(kev_new)} new CISA KEV additions." if kev_new else "."))
+        crit = sum(1 for it in items if it["priority"] == "critical")
+        high = sum(1 for it in items if it["priority"] == "high")
+        parts = []
+        if crit or high:
+            parts.append(" and ".join(p for p in (f"{crit} critical" if crit else "", f"{high} high-priority" if high else "") if p)
+                         + f" development{'s' if crit + high != 1 else ''}")
+        else:
+            parts.append("No critical or high-priority developments")
+        if kev_new:
+            parts.append(f"{len(kev_new)} CISA KEV addition{'s' if len(kev_new) != 1 else ''} in 48h")
+        if watch_updates:
+            parts.append(f"updates on {len(watch_updates)} followed item{'s' if len(watch_updates) != 1 else ''}")
+        headline = "; ".join(parts) + f" across {len(cands)} reports."
 
     ids = sorted({i for it in items for i in it["article_ids"]})
     content = {"headline": headline, "items": items, "kev_new": kev_new,

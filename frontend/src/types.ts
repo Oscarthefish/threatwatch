@@ -93,7 +93,15 @@ export interface Today {
     items: BriefingItem[]; kev_new: Partial<Vuln>[]; watch_updates: { id: number; title: string; n: number }[]
   }
   last_visit_at: string | null
+  baseline: string
   since_last_visit: { count: number; articles: ArticleBrief[] }
+  stats: {
+    new_since_visit: number; critical_24h: number; high_24h: number; total_24h: number; kev_7d: number
+    watching: number; watch_updates: number; review_queue: number
+    sources_ok: number; sources_total: number; sources_failing: string[]
+  }
+  kev_new: Vuln[]
+  regional: ArticleBrief[]
   top_threats: ArticleBrief[]
   watch_updates: { id: number; title: string; kind: string; important: number; new_evidence: number; last_updated_at: string }[]
   last_ingest_at: string | null

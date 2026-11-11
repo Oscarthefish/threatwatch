@@ -95,6 +95,20 @@ export function ArticleCard({ a, extra }: { a: ArticleBrief; extra?: ReactNode }
   )
 }
 
+/** Compact one-line-ish row for dense dashboard lists. */
+export function ArticleRow({ a }: { a: ArticleBrief }) {
+  return (
+    <div className={`arow ${a.read ? 'read' : ''}`}>
+      <span className={`dot s${a.severity}`} title={`${['Info', 'Low', 'Medium', 'High', 'Critical'][a.severity]}: ${a.severity_reasons.join('; ')}`} />
+      <div className="grow">
+        <Link className="t" to={`/article/${a.id}`}>{a.title}</Link>
+        <div className="m">{a.source.name} · <TimeAgo iso={a.published_at} />{a.related_count > 0 && <> · +{a.related_count} source{a.related_count > 1 ? 's' : ''}</>}{a.region && a.region !== 'GLOBAL' && <> · {a.region}</>}</div>
+      </div>
+      <BookmarkButton id={a.id} on={a.bookmarked} />
+    </div>
+  )
+}
+
 export function ArticleList({ items, empty }: { items?: ArticleBrief[]; empty?: ReactNode }) {
   if (!items) return <Loading />
   if (!items.length) return <>{empty ?? <Empty title="Nothing here yet" />}</>

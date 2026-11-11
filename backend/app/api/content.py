@@ -9,7 +9,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 
 from ..auth import get_db, require_user
 from ..config import get_settings
-from ..db import get_setting, iso, jloads, now_iso, set_setting, utcnow
+from ..db import get_setting, iso, jloads, now_iso, parse_iso, set_setting, utcnow
 from ..ingest import pipeline
 from ..intel import ai, entities
 from ..intel.watch import suggest_from_article
@@ -75,35 +75,68 @@ def _list_articles(conn, *, section=None, q=None, severity_min=None, source=None
 
 
 @router.get("/today")
-def today(conn: sqlite3.Connection = Depends(get_db)):
+def today(since: str | None = Query(None, max_length=40), conn: sqlite3.Connection = Depends(get_db)):
+    """Dashboard data. ``since`` lets the client pin its "since last visit" baseline for the whole session."""
     last_visit = get_setting(conn, "last_visit_at")
     b = conn.execute("SELECT * FROM briefings ORDER BY generated_at DESC LIMIT 1").fetchone()
-    briefing = None
+    briefing, briefing_ids = None, set()
     if b:
         content = jloads(b["content_json"], {})
         ids = jloads(b["article_ids"])
+        briefing_ids = set(ids)
         arts = {a["id"]: a for a in _list_articles(conn, ids=ids, limit=500, collapse=False)}
         for it in content.get("items", []):
             it["sources"] = [arts[i] for i in it.get("article_ids", []) if i in arts]
         briefing = {"id": b["id"], "date": b["briefing_date"], "generated_at": b["generated_at"], "method": b["method"],
                     "model": b["model"], **content}
-    since = last_visit or iso(utcnow() - timedelta(hours=24))
-    new_count = conn.execute("SELECT COUNT(*) FROM articles WHERE retrieved_at > ? AND (cluster_id=id OR cluster_id IS NULL)", (since,)).fetchone()[0]
+    baseline = since if since and parse_iso(since) else (last_visit or iso(utcnow() - timedelta(hours=24)))
+    rep = "(a.cluster_id = a.id OR a.cluster_id IS NULL)"
+    new_count = conn.execute(f"SELECT COUNT(*) FROM articles a WHERE a.retrieved_at > ? AND {rep}", (baseline,)).fetchone()[0]
     new_rows = conn.execute(
         f"""SELECT {ARTICLE_LIST_COLS} FROM articles a JOIN sources s ON s.id=a.source_id
-            WHERE a.retrieved_at > ? AND (a.cluster_id=a.id OR a.cluster_id IS NULL) ORDER BY a.score DESC LIMIT 8""",
-        (since,)).fetchall()
-    top = _list_articles(conn, severity_min=3, days=3, limit=6)
+            WHERE a.retrieved_at > ? AND {rep} ORDER BY a.severity DESC, a.score DESC LIMIT 40""", (baseline,)).fetchall()
+    new_articles = [article_brief(r) for r in new_rows]
+
+    day = iso(utcnow() - timedelta(hours=24))
+    sev = {r[0]: r[1] for r in conn.execute(
+        f"SELECT a.severity, COUNT(*) FROM articles a WHERE a.published_at >= ? AND {rep} GROUP BY a.severity", (day,))}
+    kev_cut = (utcnow() - timedelta(days=7)).strftime("%Y-%m-%d")
+    kev_new = [vuln_dict(r) for r in conn.execute(
+        "SELECT * FROM vulnerabilities WHERE kev=1 AND kev_date_added >= ? ORDER BY kev_date_added DESC, cve_id DESC LIMIT 8", (kev_cut,))]
+    kev_count = conn.execute("SELECT COUNT(*) FROM vulnerabilities WHERE kev=1 AND kev_date_added >= ?", (kev_cut,)).fetchone()[0]
+    top = [a for a in _list_articles(conn, severity_min=3, days=3, limit=20) if a["id"] not in briefing_ids][:6]
+    regional = _list_articles(conn, section="nz-apac", days=14, limit=5, order="new")
     watch_updates = [dict(r) for r in conn.execute(
         """SELECT w.id, w.title, w.kind, w.last_updated_at,
                   SUM(CASE WHEN we.significance='important' THEN 1 ELSE 0 END) AS important,
                   COUNT(we.id) AS new_evidence
            FROM watches w JOIN watch_evidence we ON we.watch_id=w.id AND we.status='linked' AND we.linked_at > ?
-           WHERE w.status='active' GROUP BY w.id ORDER BY important DESC, w.last_updated_at DESC LIMIT 8""", (since,))]
+           WHERE w.status='active' GROUP BY w.id ORDER BY important DESC, w.last_updated_at DESC LIMIT 8""", (baseline,))]
+    watching = conn.execute("SELECT COUNT(*) FROM watches WHERE status='active'").fetchone()[0]
+    review = conn.execute(
+        "SELECT COUNT(*) FROM watch_evidence we JOIN watches w ON w.id=we.watch_id WHERE we.status='candidate' AND w.status='active'").fetchone()[0]
+    srcs = conn.execute("SELECT name, enabled, last_status, consecutive_failures FROM sources WHERE enabled=1").fetchall()
+    failing = [r["name"] for r in srcs if r["last_status"] == "error"]
     return {
         "briefing": briefing,
         "last_visit_at": last_visit,
-        "since_last_visit": {"count": new_count, "articles": [article_brief(r) for r in new_rows]},
+        "baseline": baseline,
+        "since_last_visit": {"count": new_count, "articles": new_articles},
+        "stats": {
+            "new_since_visit": new_count,
+            "critical_24h": sev.get(4, 0),
+            "high_24h": sev.get(3, 0),
+            "total_24h": sum(sev.values()),
+            "kev_7d": kev_count,
+            "watching": watching,
+            "watch_updates": len(watch_updates),
+            "review_queue": review,
+            "sources_ok": len(srcs) - len(failing),
+            "sources_total": len(srcs),
+            "sources_failing": failing,
+        },
+        "kev_new": kev_new,
+        "regional": regional,
         "top_threats": top,
         "watch_updates": watch_updates,
         "last_ingest_at": get_setting(conn, "last_ingest_at"),

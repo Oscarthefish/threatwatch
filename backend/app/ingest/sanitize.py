@@ -15,6 +15,7 @@ _CTRL = re.compile(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f​-‏‪-‮⁦-⁩]")
 _WS = re.compile(r"[ \t\r\f\v]+")
 _NL = re.compile(r"\n{3,}")
 _BLOCK = re.compile(r"(?i)<\s*(br|/p|/div|/li|/h[1-6]|/tr|/pre|/blockquote)\b[^>]*>")
+_ENTITY = re.compile(r"&(#\d{1,6}|#x[0-9a-fA-F]{1,6}|[a-zA-Z]{2,8});")
 _DROP = re.compile(r"(?is)<\s*(script|style|noscript|iframe|object|svg)\b.*?<\s*/\s*\1\s*>")
 
 
@@ -25,6 +26,8 @@ def html_to_text(raw: str | None, max_len: int = 20000) -> str:
     s = _BLOCK.sub("\n", s)
     s = nh3.clean(s, tags=set(), attributes={}, strip_comments=True)
     s = html.unescape(s)
+    if _ENTITY.search(s):  # some feeds double-escape (&amp;quot;) — one more pass, never more
+        s = html.unescape(s)
     s = _CTRL.sub("", s)
     s = "\n".join(_WS.sub(" ", line).strip() for line in s.split("\n"))
     s = _NL.sub("\n\n", s).strip()
