@@ -2,26 +2,30 @@ import { useInfiniteQuery } from '@tanstack/react-query'
 import { Link, useSearchParams } from 'react-router-dom'
 import { api, qs } from '../api'
 import type { Vuln } from '../types'
-import { Empty, ErrorBox, Loading, PageHeader } from '../components/ui'
+import { ErrorBox, LoadMore, Loading, NoResults, PageHeader } from '../components/ui'
 
+const PAGE = 50
+
+/** One CVE: product first (what you recognise), identifiers and exploitation signals, scores on the right. */
 export function VulnRow({ v }: { v: Vuln }) {
+  const product = [v.vendor, v.product].filter(Boolean).join(' ')
   return (
-    <Link to={`/vuln/${v.cve_id}`} className="card vcard" style={{ color: 'inherit', textDecoration: 'none' }}>
-      <div style={{ minWidth: 0 }}>
-        <div className="row">
-          <code style={{ fontWeight: 700 }}>{v.cve_id}</code>
-          {v.kev && <span className="chip kev" title="CISA Known Exploited Vulnerabilities: confirmed exploitation">KEV {v.kev_date_added}</span>}
+    <Link to={`/vuln/${v.cve_id}`} className="vrow">
+      <div className="grow">
+        <div className="vprod">{product || v.cve_id}</div>
+        <div className="row mt-2">
+          {product && <code className="mono-id">{v.cve_id}</code>}
+          {v.kev && <span className="chip kev">Exploited · KEV {v.kev_date_added}</span>}
           {v.kev_ransomware === 'Known' && <span className="chip kev">Ransomware use</span>}
-          {(v.mentions ?? 0) > 0 && <span className="chip">{v.mentions} article{v.mentions === 1 ? '' : 's'}</span>}
+          {(v.mentions ?? 0) > 0 && <span className="chip">{v.mentions} report{v.mentions === 1 ? '' : 's'}</span>}
         </div>
-        <div style={{ fontWeight: 600, marginTop: '.2rem' }}>{[v.vendor, v.product].filter(Boolean).join(' · ') || 'Product not yet known'}</div>
-        <div className="small muted" style={{ overflow: 'hidden', textOverflow: 'ellipsis', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' }}>{v.name || v.description || 'Awaiting CVE record enrichment'}</div>
+        {(v.name || v.description) && <div className="vname clamp-2 mt-2">{v.name || v.description}</div>}
+        {!product && !v.name && !v.description && <div className="vname mt-2">Product and description pending from the CVE record</div>}
       </div>
-      <div className="metric" style={{ minWidth: 72 }}>
-        <span title="FIRST EPSS: probability of exploitation in the next 30 days">EPSS</span><b>{v.epss != null ? `${(v.epss * 100).toFixed(1)}%` : '—'}</b>
-        {v.epss != null && <div className="bar"><i style={{ width: `${Math.max(3, v.epss * 100)}%` }} /></div>}
-        <span style={{ display: 'block', marginTop: 4 }}>CVSS</span><b>{v.cvss_score ?? '—'}</b>
-      </div>
+      <dl className="vmetrics">
+        <dt>EPSS</dt><dd className="mb-0"><b className={(v.epss ?? 0) >= 0.1 ? 'hot' : ''}>{v.epss != null ? `${(v.epss * 100).toFixed(1)}%` : 'n/a'}</b></dd>
+        <dt>CVSS</dt><dd className="mb-0"><b className={(v.cvss_score ?? 0) >= 9 ? 'hot' : ''}>{v.cvss_score ?? 'n/a'}</b></dd>
+      </dl>
     </Link>
   )
 }
@@ -32,36 +36,48 @@ export default function Vulns() {
   const sort = params.get('sort') ?? 'recent'
   const q = params.get('q') ?? ''
   const epss = params.get('epss') ?? ''
+  const filtered = !!(kev || q || epss)
   const set = (k: string, v: string) => { const p = new URLSearchParams(params); if (v) p.set(k, v); else p.delete(k); setParams(p, { replace: true }) }
+  const clear = () => setParams(new URLSearchParams(sort !== 'recent' ? { sort } : {}), { replace: true })
   const query = useInfiniteQuery({
     queryKey: ['vulns', kev, sort, q, epss],
     queryFn: ({ pageParam }) => api.get<{ items: Vuln[]; has_more: boolean; stats: { total: number; kev: number; with_epss: number } }>(
-      `/api/vulnerabilities${qs({ kev: kev ? 'true' : undefined, sort, q, min_epss: epss, offset: pageParam, limit: 50 })}`),
+      `/api/vulnerabilities${qs({ kev: kev ? 'true' : undefined, sort, q, min_epss: epss, offset: pageParam, limit: PAGE })}`),
     initialPageParam: 0,
-    getNextPageParam: (last, all) => last.has_more ? all.length * 50 : undefined,
+    getNextPageParam: (last, all) => (last.has_more ? all.length * PAGE : undefined),
   })
   const items = query.data?.pages.flatMap((p) => p.items)
   const stats = query.data?.pages[0]?.stats
+
   return (
     <>
-      <PageHeader title="Vulnerabilities" eyebrow={['Intelligence', 'CVE / KEV / EPSS / CVSS']} sub={stats ? `${stats.total} tracked CVEs · ${stats.kev} in CISA KEV · EPSS for ${stats.with_epss}` : 'CVE, CISA KEV, FIRST EPSS and CVSS'} />
-      <div className="stack" style={{ marginBottom: '1rem' }}>
-        <form className="row" onSubmit={(e) => { e.preventDefault(); set('q', String(new FormData(e.currentTarget).get('q') ?? '')) }}>
-          <label className="sr-only" htmlFor="vq">Filter CVEs</label>
-          <input id="vq" name="q" className="input grow" defaultValue={q} placeholder="CVE ID, vendor or product" />
+      <PageHeader title="Vulnerabilities" eyebrow={['Intelligence', 'CVE / KEV / EPSS / CVSS']}
+        sub={stats ? `${stats.total.toLocaleString()} CVEs tracked, ${stats.kev.toLocaleString()} known to be exploited (CISA KEV).` : 'CVEs from reporting and the CISA KEV catalogue, scored with FIRST EPSS and CVSS.'} />
+      <div className="filters">
+        <form role="search" className="row nowrap" onSubmit={(e) => { e.preventDefault(); set('q', String(new FormData(e.currentTarget).get('q') ?? '').trim()) }}>
+          <label className="sr-only" htmlFor="vq">Filter by CVE, vendor or product</label>
+          <input id="vq" name="q" type="search" className="input grow" defaultValue={q} key={q} placeholder="CVE ID, vendor or product" />
           <button className="btn">Filter</button>
         </form>
         <div className="row">
-          <button className={`chip ${kev ? 'on' : ''}`} aria-pressed={!!kev} onClick={() => set('kev', kev ? '' : '1')}>KEV only</button>
-          <button className={`chip ${epss ? 'on' : ''}`} aria-pressed={!!epss} onClick={() => set('epss', epss ? '' : '0.1')}>EPSS ≥ 10%</button>
-          <label className="sr-only" htmlFor="vsort">Sort</label>
-          <select id="vsort" className="input" style={{ width: 'auto' }} value={sort} onChange={(e) => set('sort', e.target.value)}>
-            <option value="recent">Recently added</option><option value="epss">Highest EPSS</option><option value="cvss">Highest CVSS</option><option value="mentioned">Most reported</option></select>
+          <div className="chips" role="group" aria-label="Quick filters">
+            <button type="button" className={`chip ${kev ? 'on' : ''}`} aria-pressed={!!kev} onClick={() => set('kev', kev ? '' : '1')}>Exploited (KEV)</button>
+            <button type="button" className={`chip ${epss ? 'on' : ''}`} aria-pressed={!!epss} onClick={() => set('epss', epss ? '' : '0.1')}>EPSS 10% or more</button>
+          </div>
+          <div className="selects grow end">
+            <label>Sort
+              <select className="input" value={sort} onChange={(e) => set('sort', e.target.value)}>
+                <option value="recent">Recently added</option><option value="epss">Highest EPSS</option><option value="cvss">Highest CVSS</option><option value="mentioned">Most reported</option>
+              </select>
+            </label>
+          </div>
         </div>
       </div>
-      {query.isError && <ErrorBox error={query.error} />}
-      {!items ? <Loading lines={8} /> : items.length === 0 ? <Empty title="No vulnerabilities match" /> : <div className="stack">{items.map((v) => <VulnRow key={v.cve_id} v={v} />)}</div>}
-      {query.hasNextPage && <div style={{ textAlign: 'center', marginTop: '1rem' }}><button className="btn" onClick={() => query.fetchNextPage()}>Load more</button></div>}
+      {query.isError ? <ErrorBox error={query.error} onRetry={() => query.refetch()} />
+        : !items ? <Loading lines={8} />
+        : items.length === 0 ? <NoResults filtered={filtered} onClear={clear} what="vulnerabilities" />
+        : <div className="vlist">{items.map((v) => <VulnRow key={v.cve_id} v={v} />)}</div>}
+      <LoadMore show={!!query.hasNextPage} busy={query.isFetchingNextPage} onClick={() => query.fetchNextPage()} />
     </>
   )
 }

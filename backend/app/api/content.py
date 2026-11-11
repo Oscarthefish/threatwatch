@@ -279,7 +279,7 @@ def vulnerabilities(
         where.append("COALESCE(v.kev_date_added, substr(v.first_seen_at,1,10)) >= ?")
         params.append((utcnow() - timedelta(days=days)).strftime("%Y-%m-%d"))
     mentions = "(SELECT COUNT(*) FROM article_entities ae JOIN entities e ON e.id=ae.entity_id WHERE e.type='cve' AND e.normalized=lower(v.cve_id))"
-    order = {"recent": "COALESCE(v.kev_date_added, substr(v.first_seen_at,1,10)) DESC, v.cve_id DESC",
+    order = {"recent": "(v.kev = 0 AND v.description IS NULL AND v.vendor IS NULL), COALESCE(v.kev_date_added, substr(v.first_seen_at,1,10)) DESC, v.cve_id DESC",
              "epss": "v.epss IS NULL, v.epss DESC", "cvss": "v.cvss_score IS NULL, v.cvss_score DESC",
              "mentioned": f"{mentions} DESC, v.first_seen_at DESC"}[sort]
     rows = conn.execute(

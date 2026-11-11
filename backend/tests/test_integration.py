@@ -347,3 +347,20 @@ def test_cve_mentioned_only_in_body_links_to_vulnerability_watch(conn, fixture_s
     wid, _ = watch.create_watch(conn, kind="vulnerability", title="CVE-2099-0007 Example Gateway")
     st = conn.execute("SELECT status FROM watch_evidence WHERE watch_id=? AND article_id=?", (wid, aid)).fetchone()
     assert st and st[0] == "linked"
+
+
+@respx.mock
+def test_roundup_mention_is_minor_and_silent(conn, fixture_sources):
+    """A newsletter roundup that mentions a followed CVE in passing links, but never counts as important or notifies."""
+    _ingest_split(conn)
+    wid, _ = watch.create_watch(conn, kind="vulnerability", title="CVE-2099-0001", notify_pref="all")
+    src = conn.execute("SELECT id FROM sources WHERE key='fx-research'").fetchone()[0]
+    aid = conn.execute(
+        "INSERT INTO articles(source_id,url,canonical_url,title,summary_text,retrieved_at,published_at) VALUES(?,?,?,?,?,?,?)",
+        (src, "https://research.example.org/weekly", "https://research.example.org/weekly", "Week in review: Akira, LockBit and more",
+         "Roundup. Exploited CVE-2099-0001 also patched. Elsewhere LockBit and Akira hit Fabrikam.", "2026-11-09T07:00:00Z", "2026-11-09T07:00:00Z")).lastrowid
+    pipeline.process_article(conn, aid)
+    watch.match_new_articles(conn, [aid])
+    ev = conn.execute("SELECT status, significance FROM watch_evidence WHERE watch_id=? AND article_id=?", (wid, aid)).fetchone()
+    assert ev["status"] == "linked" and ev["significance"] == "minor"
+    assert conn.execute("SELECT COUNT(*) FROM notifications WHERE watch_id=? AND article_id=?", (wid, aid)).fetchone()[0] == 0

@@ -390,27 +390,36 @@ def _collect_structured(conn, evidence: list[dict]) -> tuple[list[dict], list[di
     return ioc_list, sorted(techs.values(), key=lambda x: (x["inferred"], x["id"])), per_article
 
 
+def _fmt_entities(new_ents: set[tuple[str, str]]) -> str:
+    vals = sorted({(v.upper() if t == "cve" else v) for t, v in new_ents})
+    shown = ", ".join(vals[:3])
+    return f"{shown} and {len(vals) - 3} more" if len(vals) > 3 else shown
+
+
 def _heuristic_assess(e: dict, known_clusters: set[int], known_ents: set[tuple[str, str]], ents: set[tuple[str, str]],
                       known_sources: set[str]) -> tuple[str, str]:
     tags = set(jloads(e["tags"]))
+    if "roundup" in tags:
+        # Roundups/newsletters mix unrelated stories: their other entities say nothing about this subject.
+        return "minor", "Mentioned in a news roundup or podcast; read it for context."
     new_ents = {x for x in ents - known_ents if x[0] in ("cve", "actor", "ransomware", "malware", "victim", *entities.IOC_TYPES)}
     if e["cluster_id"] in known_clusters and not new_ents:
-        return "duplicate", "Same story as evidence already on record (near-duplicate reporting)."
+        return "duplicate", "Same story as a report already on record."
     reasons = []
     if new_ents:
-        sample = ", ".join(sorted(v for _, v in new_ents)[:5])
-        reasons.append(f"new entities/indicators: {sample}")
+        reasons.append(f"Names {_fmt_entities(new_ents)}")
     if e["authority"] >= 3 and e["source_name"] not in known_sources:
-        reasons.append(f"first official advisory ({e['source_name']})")
+        reasons.append(f"First official advisory ({e['source_name']})")
     if tags & {"exploited", "zero-day"}:
-        reasons.append("reports exploitation")
+        reasons.append("Reports exploitation")
+    joined = ". ".join(reasons) + ("." if reasons else "")
     if e["severity"] >= 3 and (reasons or e["source_name"] not in known_sources):
-        return "important", "; ".join(reasons or [f"{SEVERITY_LABELS[e['severity']]} severity reporting from a new source"])
+        return "important", joined or f"{SEVERITY_LABELS[e['severity']].capitalize()} severity reporting from a new source."
     if reasons:
-        return ("important" if any(r.startswith(("first official", "reports exploitation")) for r in reasons) else "meaningful"), "; ".join(reasons)
+        return ("important" if any(r.startswith(("First official", "Reports exploitation")) for r in reasons) else "meaningful"), joined
     if e["source_name"] not in known_sources:
-        return "meaningful", f"additional independent reporting ({e['source_name']})"
-    return "minor", "No new entities or sources identified."
+        return "meaningful", f"Additional independent reporting from {e['source_name']}."
+    return "minor", "No new names, indicators or sources."
 
 
 def update_record(conn: sqlite3.Connection, watch_id: int, initial: bool = False, force_ai: bool = False) -> dict | None:

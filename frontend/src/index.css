@@ -552,3 +552,53 @@ details.versions .version:first-child { border-top: 0; padding-top: 0; }
 .sig.minor, .sig.duplicate { color: var(--muted); }
 textarea.input.notes { min-height: 180px; }
 .danger-zone { border-color: color-mix(in srgb, var(--danger) 35%, var(--border)); }
+
+/* ====================== Lists (batch 5) ====================== */
+.acard { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--s-2); }
+.acard-actions { display: flex; flex-direction: column; gap: var(--s-2); align-items: center; margin: -2px -6px 0 0; }
+@media (min-width: 640px) { .acard-actions { flex-direction: row; align-items: flex-start; gap: var(--s-1); } }
+.acard .meta .src { font-weight: var(--w-semibold); color: var(--text); }
+.acard .meta time::before { content: "·"; margin-right: var(--s-2); color: var(--faint); }
+.filters { display: flex; flex-direction: column; gap: var(--s-3); margin-bottom: var(--s-4); padding-bottom: var(--s-4); border-bottom: var(--hairline); }
+.chips.scroll { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; padding: 4px 0; margin: -4px 0; }
+.chips.scroll::-webkit-scrollbar { display: none; }
+@media (min-width: 900px) { .chips.scroll { flex-wrap: wrap; overflow: visible; } }
+.selects { display: flex; gap: var(--s-2); flex-wrap: wrap; align-items: flex-end; }
+.selects label { display: flex; flex-direction: column; gap: 2px; font-size: var(--t-xs); font-weight: var(--w-semibold); color: var(--muted); flex: 1 1 120px; max-width: 220px; }
+.list-meta { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: var(--s-2); font-size: var(--t-xs); color: var(--muted); }
+.vrow { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: var(--s-1) var(--s-4); padding: var(--s-3) var(--s-4); background: var(--surface);
+  border: var(--hairline); border-radius: var(--r-sm); color: inherit; }
+.vrow:hover { text-decoration: none; border-color: var(--border-strong); }
+.vrow:hover .vprod { color: var(--primary); }
+.vrow .vprod { font-weight: var(--w-semibold); font-size: var(--t-md); line-height: var(--lh-tight); }
+.vrow .vname { font-size: var(--t-sm); color: var(--muted); }
+.vmetrics { display: grid; grid-template-columns: auto auto; gap: 0 var(--s-3); align-content: start; text-align: right; font-size: var(--t-xs); color: var(--muted); }
+.vmetrics b { font-family: var(--mono); font-size: var(--t-md); color: var(--text); font-weight: var(--w-semibold); }
+.vmetrics b.hot { color: var(--sev-high); }
+.vlist { display: flex; flex-direction: column; gap: var(--s-2); }
+.day-head { font-family: var(--mono); font-size: 11px; font-weight: var(--w-semibold); letter-spacing: .06em; text-transform: uppercase; color: var(--muted);
+  margin: var(--s-5) 0 var(--s-2); }
+.day-head:first-child { margin-top: 0; }
+.nlist { list-style: none; margin: 0; padding: 0; border: var(--hairline); border-radius: var(--r-md); background: var(--surface); overflow: hidden; }
+.nitem { border-top: var(--hairline); }
+.nitem:first-child { border-top: 0; }
+.nitem a, .nitem .nbody { display: grid; grid-template-columns: 12px minmax(0, 1fr) auto; gap: var(--s-1) var(--s-3); padding: var(--s-3) var(--s-4); color: inherit; }
+.nitem a:hover { text-decoration: none; background: var(--surface-2); }
+.nitem .ndot { width: 8px; height: 8px; border-radius: 50%; margin-top: 7px; background: transparent; }
+.nitem.unread .ndot { background: var(--primary); }
+.nitem .ntitle { font-weight: var(--w-medium); }
+.nitem.unread .ntitle { font-weight: var(--w-bold); }
+.nitem .nmsg { grid-column: 2 / 4; font-size: var(--t-sm); color: var(--muted); white-space: pre-wrap; }
+.nitem time { font-size: var(--t-xs); color: var(--faint); font-family: var(--mono); white-space: nowrap; }
+.result-group + .result-group { margin-top: var(--s-5); }
+.reflist { list-style: none; margin: 0; padding: 0; font-size: var(--t-sm); }
+.reflist li { padding: var(--s-1) 0; border-top: var(--hairline); }
+.reflist li:first-child { border-top: 0; }
+.vmetrics dd { margin: 0; }
+
+/* batch 5 refinements */
+.acard .meta { flex-wrap: nowrap; min-width: 0; }
+.acard .meta .src { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.acard .meta time { white-space: nowrap; }
+.selects label { flex: 1 1 0; min-width: 0; max-width: 220px; }
+.selects label select.input { padding: 0 var(--s-2); font-size: var(--t-sm); }

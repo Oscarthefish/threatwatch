@@ -183,22 +183,27 @@ export function ActionList({ actions, ai }: { actions: SocAction[]; ai?: { actio
 export function ArticleCard({ a, extra }: { a: ArticleBrief; extra?: ReactNode }) {
   return (
     <article className={`acard s${a.severity} ${a.read ? 'read' : ''}`}>
-      <div className="meta">
-        <Severity level={a.severity} reasons={a.severity_reasons} />
-        <span>{a.source.name}</span>
-        <span>·</span>
-        <TimeAgo iso={a.published_at} />
-        {a.related_count > 0 && <span className="chip">+{a.related_count} more source{a.related_count > 1 ? 's' : ''}</span>}
-        {a.region && a.region !== 'GLOBAL' && <span className="chip">{a.region}</span>}
-        <span className="actions">
-          <a className="btn icon quiet compact" href={a.url} target="_blank" rel="noopener noreferrer" aria-label={`Open original on ${a.source.name}`}><IconExternal /></a>
-          <BookmarkButton id={a.id} on={a.bookmarked} compact />
-        </span>
+      <div className="acard-body">
+        <div className="meta">
+          <Severity level={a.severity} reasons={a.severity_reasons} />
+          <span className="src">{a.source.name}</span>
+          <TimeAgo iso={a.published_at} />
+        </div>
+        <Link className="title" to={`/article/${a.id}`}>{a.title}</Link>
+        {(a.ai_summary || a.excerpt) && <p className="excerpt">{a.ai_summary ?? a.excerpt}</p>}
+        {(a.related_count > 0 || (a.region && a.region !== 'GLOBAL')) && (
+          <div className="row xsmall muted mt-2">
+            {a.related_count > 0 && <span>+{a.related_count} more source{a.related_count > 1 ? 's' : ''}</span>}
+            {a.region && a.region !== 'GLOBAL' && <span className="chip">{a.region}</span>}
+          </div>
+        )}
+        <ActionTags actions={a.actions} />
+        {extra}
       </div>
-      <Link className="title" to={`/article/${a.id}`}>{a.title}</Link>
-      {(a.ai_summary || a.excerpt) && <p className="excerpt">{a.ai_summary ?? a.excerpt}</p>}
-      <ActionTags actions={a.actions} />
-      {extra}
+      <div className="acard-actions">
+        <BookmarkButton id={a.id} on={a.bookmarked} compact />
+        <a className="btn icon quiet compact" href={a.url} target="_blank" rel="noopener noreferrer" aria-label={`Open original on ${a.source.name}`}><IconExternal /></a>
+      </div>
     </article>
   )
 }
@@ -217,6 +222,21 @@ export function ArticleRow({ a }: { a: ArticleBrief }) {
       <BookmarkButton id={a.id} on={a.bookmarked} compact />
     </div>
   )
+}
+
+/** Empty state that distinguishes "nothing matches your filters" from "nothing collected". */
+export function NoResults({ filtered, onClear, what = 'reports' }: { filtered: boolean; onClear?: () => void; what?: string }) {
+  return filtered ? (
+    <Empty title={`No ${what} match these filters`}>
+      <p>Widen the time range or remove a filter.</p>
+      {onClear && <button type="button" className="btn" onClick={onClear}>Clear filters</button>}
+    </Empty>
+  ) : <Empty title={`No ${what} yet`}><p>New items appear here after the next collection run (every 30 minutes).</p></Empty>
+}
+
+export function LoadMore({ show, busy, onClick }: { show: boolean; busy: boolean; onClick: () => void }) {
+  if (!show) return null
+  return <div className="center mt-4"><button type="button" className="btn" aria-busy={busy || undefined} onClick={onClick}>Load more</button></div>
 }
 
 export function ArticleList({ items, empty }: { items?: ArticleBrief[]; empty?: ReactNode }) {
