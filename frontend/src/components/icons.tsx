@@ -22,3 +22,4 @@ export const IconRefresh = (p: P) => <svg {...base} {...p}><path d="M20 11a8 8 0
 export const IconCopy = (p: P) => <svg {...base} {...p}><rect x="9" y="9" width="11" height="11" rx="2" /><path d="M5 15V5a2 2 0 0 1 2-2h10" /></svg>
 export const IconBack = (p: P) => <svg {...base} {...p}><path d="M15 18l-6-6 6-6" /></svg>
 export const IconSave = IconBookmark
+export const IconKeyboard = (p: P) => <svg {...base} {...p}><rect x="2" y="6" width="20" height="12" rx="2" /><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M7 14h10" /></svg>

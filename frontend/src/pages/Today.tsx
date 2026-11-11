@@ -26,14 +26,14 @@ function Tile({ to, n, label, sub, tone }: { to: string; n: number | string; lab
 function BriefItem({ it, n, open, onToggle }: { it: BriefingItem; n: number; open: boolean; onToggle: () => void }) {
   const lead = it.sources?.[0]
   return (
-    <div className="bitem">
+    <div className="bitem" data-nav>
       <span className="num">{n}</span>
       <div className="grow">
-        <button className="bt" aria-expanded={open} onClick={onToggle}>{it.title}</button>
+        <button className="bt" data-open aria-expanded={open} onClick={onToggle}>{it.title}</button>
         {it.summary && <p className="bs">{it.summary}</p>}
         <div className="bm">
           <Severity level={it.priority} />
-          {(it.sources ?? []).slice(0, 4).map((s) => <Link key={s.id} className="cite" to={`/article/${s.id}`} title={s.title}>{s.source.name}</Link>)}
+          {(it.sources ?? []).slice(0, 4).map((s) => <Link key={s.id} className="bsrc" to={`/article/${s.id}`} title={s.title}>{s.source.name}</Link>)}
           {(it.sources?.length ?? 0) > 4 && <span className="faint">+{(it.sources?.length ?? 0) - 4}</span>}
           {lead && <span className="faint"><TimeAgo iso={lead.published_at} /></span>}
         </div>
@@ -154,7 +154,7 @@ export default function Today() {
             <header><h2 id="watch-h">Following</h2><Link to="/watch">All</Link></header>
             <div className="body">
               {d.watch_updates.length > 0 ? d.watch_updates.map((w) => (
-                <Link key={w.id} to={`/watch/${w.id}`} className="kevrow">
+                <Link key={w.id} to={`/watch/${w.id}`} className="kevrow" data-nav>
                   <span className="chip">{w.kind}</span>
                   <span className="p grow">{w.title}</span>
                   <span className="r">{w.important > 0 && <span className="sig important">{w.important} important</span>} {w.new_evidence} new</span>
@@ -170,7 +170,7 @@ export default function Today() {
             <header><h2 id="kev-h">New in CISA KEV</h2><Link to="/vulns?kev=1">All KEV</Link></header>
             <div className="body">
               {d.kev_new.length === 0 ? <p className="small muted mb-0">No additions in the last 7 days.</p> : d.kev_new.map((v) => (
-                <Link key={v.cve_id} to={`/vuln/${v.cve_id}`} className="kevrow">
+                <Link key={v.cve_id} to={`/vuln/${v.cve_id}`} className="kevrow" data-nav>
                   <div className="grow">
                     <div className="p">{[v.vendor, v.product].filter(Boolean).join(' ')}</div>
                     <code>{v.cve_id}</code>{v.kev_ransomware === 'Known' && <span className="chip kev ml-1">ransomware</span>}

@@ -30,7 +30,7 @@ export default function Section({ section, title, sub, tags, regions }: Props) {
 
   return (
     <>
-      <PageHeader title={title} sub={sub} eyebrow={['Intelligence', section ? 'Section' : 'All sources']} />
+      <PageHeader title={title} sub={sub} eyebrow={['Intelligence', section ? 'Topic feed' : 'All sources']} />
       <div className="filters">
         {tags && (
           <div className="chips scroll" role="group" aria-label="Topic">

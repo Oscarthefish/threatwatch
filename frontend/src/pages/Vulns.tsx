@@ -10,7 +10,7 @@ const PAGE = 50
 export function VulnRow({ v }: { v: Vuln }) {
   const product = [v.vendor, v.product].filter(Boolean).join(' ')
   return (
-    <Link to={`/vuln/${v.cve_id}`} className="vrow">
+    <Link to={`/vuln/${v.cve_id}`} className="vrow" data-nav>
       <div className="grow">
         <div className="vprod">{product || v.cve_id}</div>
         <div className="row mt-2">
@@ -23,8 +23,8 @@ export function VulnRow({ v }: { v: Vuln }) {
         {!product && !v.name && !v.description && <div className="vname mt-2">Product and description pending from the CVE record</div>}
       </div>
       <dl className="vmetrics">
-        <dt>EPSS</dt><dd className="mb-0"><b className={(v.epss ?? 0) >= 0.1 ? 'hot' : ''}>{v.epss != null ? `${(v.epss * 100).toFixed(1)}%` : 'n/a'}</b></dd>
-        <dt>CVSS</dt><dd className="mb-0"><b className={(v.cvss_score ?? 0) >= 9 ? 'hot' : ''}>{v.cvss_score ?? 'n/a'}</b></dd>
+        <dt>EPSS</dt><dd className="mb-0">{v.epss != null ? <b className={v.epss >= 0.1 ? 'hot' : ''}>{(v.epss * 100).toFixed(1)}%</b> : <span className="na">n/a</span>}</dd>
+        <dt>CVSS</dt><dd className="mb-0">{v.cvss_score != null ? <b className={v.cvss_score >= 9 ? 'hot' : ''}>{v.cvss_score.toFixed(1)}</b> : <span className="na">n/a</span>}</dd>
       </dl>
     </Link>
   )

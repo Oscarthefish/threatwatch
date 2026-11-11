@@ -26,9 +26,10 @@ verified with axe-core). Input borders and the focus ring meet **3:1**.
 
 | Token | Light | Dark | Note |
 |---|---|---|---|
+| `--bg` / `--surface` / `--surface-2` | #f5f6f8 / #ffffff / #eff1f4 | #0d0f12 / #14171b / #1c2026 | Neutral graphite in dark; sidebar and top bar sit on `--bg` |
 | `--primary` | #0d7a6c | #3fb5a3 | Primary button text is white in light, near-black in dark (5.2:1 / 7.4:1) |
-| `--text` / `--muted` / `--faint` | #17202a / #5d6b7a / #616f7e | #e6e9ee / #9aa6b4 / #818d99 | `--faint` is still AA; never use lighter text |
-| `--sev-critical/high/medium/low/info` | #c8242b / #b94c0a / #8d6600 / #2a71ae / #616f7e | #ff5b61 / #ff8a3d / #e3b341 / #5aa9e6 / #818d99 | Always paired with a text label; colour is never the only signal |
+| `--text` / `--muted` / `--faint` | #14191f / #56626f / #5c6875 | #e8eaed / #9da5af / #8f97a1 | `--faint` is still AA; never use lighter text |
+| `--sev-critical/high/medium/low/info` | #b81d24 / #a8450a / #7d5a00 / #22679f / #5c6875 | #ff5b61 / #ff8a3d / #e3b341 / #5aa9e6 / #8f97a1 | Shown as a tinted label (10% tint keeps 4.5:1); always text, never colour alone |
 | `--ok` / `--warn` / `--danger` | #1a7d47 / #8d6600 / #c8242b | #3fb97a / #e3b341 / #ff5b61 | |
 
 ## Shape, elevation, motion
@@ -57,6 +58,8 @@ Filter chips and the severity label extend their hit area with a pseudo-element.
 | Severity `<Severity reasons>` | cards, article | tap or keyboard opens “Why …” popover; Esc / outside tap closes |
 | ErrorBox `<ErrorBox error onRetry>` | failed loads | says what happened and how to fix it, with retry |
 | Tabs `.tabs`, segmented `.seg` | watch detail, filters | `aria-selected` / `aria-pressed` |
+| Joined list `.alist` / `.vlist` | every article and CVE list | one surface with hairline rows; hover tint; keyboard selection bar |
+| Keyboard shortcuts `useShortcuts` | whole app (desktop) | items carry `data-nav`, keyed buttons carry `data-key`; `?` opens the list |
 
 ## Rules
 - One primary button per view; everything else is secondary or quiet.
@@ -99,3 +102,15 @@ Filter chips and the severity label extend their hit area with a pseudo-element.
 - Real-device check on Android once HTTPS (Tailscale Serve) is in place: PWA install, offline reading, push.
 - Route-level code splitting (bundle is ~115 kB gzipped; fine today).
 - A short user test of the Follow flow after a week of real use, to tune notification defaults.
+
+## Batch 7: desktop polish (November 2026)
+| Area | Before | After |
+|---|---|---|
+| Palette | Blue-slate dark theme; orange outlined step tags, blue source chips and red underlined severity all competing | Neutral graphite dark theme; severity is the only coloured label; step tags are neutral with an orange marker for urgent |
+| Lists | Separate boxed cards, each with a coloured left border | One joined list per page, hairline rows, hover tint |
+| Layout | Today wide and left-filled, list pages centred, so the title moved between sections | One left edge on every page, aligned with the search box |
+| Today | Six separate stat boxes, sources as link chips | One joined stats strip, sources as plain comma-separated links |
+| Buttons | "Bookmarked" and "Following" teal next to the teal primary | Toggled state is neutral with an accent icon; one filled button per view |
+| Keyboard | `/` only | `j`/`k` move, `o` open, `b` bookmark, `f` follow, `v` source, `g` + letter to change section, `?` lists them (button in the top bar) |
+
+Verified as before: 96 axe scans with 0 violations and no overflow, 60 Tab stops with visible focus, keyboard shortcuts exercised end to end.

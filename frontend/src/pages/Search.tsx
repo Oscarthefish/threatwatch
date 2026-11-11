@@ -37,7 +37,7 @@ export default function Search() {
           <section className="result-group" aria-labelledby="sr-w">
             <h2 id="sr-w" className="day-head">Following ({r.data.watches.length})</h2>
             <div className="vlist">{r.data.watches.map((w) => (
-              <Link key={w.id} to={`/watch/${w.id}`} className="vrow"><div><div className="xsmall muted">{kindLabel(w.kind)}</div><div className="vprod">{w.title}</div></div></Link>
+              <Link key={w.id} to={`/watch/${w.id}`} className="vrow" data-nav><div><div className="xsmall muted">{kindLabel(w.kind)}</div><div className="vprod">{w.title}</div></div></Link>
             ))}</div>
           </section>
         )}

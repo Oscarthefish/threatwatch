@@ -84,9 +84,9 @@ export default function ArticlePage() {
           {a.sections.map((s) => SECTION_LABELS[s] ? <Link key={s} className="chip link-chip" to={SECTION_LABELS[s][1]}>{SECTION_LABELS[s][0]}</Link> : <span key={s} className="chip">{s}</span>)}
         </div>
         <div className="row doc-actions">
-          <a className="btn primary" href={a.url} target="_blank" rel="noopener noreferrer">Read on {a.source.name}<IconExternal /></a>
+          <a className="btn primary" data-key="v" href={a.url} target="_blank" rel="noopener noreferrer">Read on {a.source.name}<IconExternal /></a>
           <BookmarkButton id={a.id} on={a.bookmarked} withLabel />
-          <button type="button" className={`btn ${following.length ? 'on' : ''}`} onClick={() => setFollow(true)}><IconEye />{following.length ? 'Following' : 'Follow'}</button>
+          <button type="button" data-key="f" className={`btn ${following.length ? 'on' : ''}`} onClick={() => setFollow(true)}><IconEye />{following.length ? 'Following' : 'Follow'}</button>
         </div>
         {(following.length > 0 || pending.length > 0) && (
           <p className="small muted mb-0">

@@ -3,8 +3,9 @@ import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { api } from '../api'
 import { Sheet } from './Sheet'
+import { ShortcutsSheet, useShortcuts } from './Shortcuts'
 import { timeAgo } from './ui'
-import { IconBell, IconBolt, IconBookmark, IconBug, IconEye, IconGlobe, IconMoon, IconMore, IconSearch, IconSearchDoc, IconSettings, IconSun, IconTarget, IconToday } from './icons'
+import { IconBell, IconBolt, IconBookmark, IconBug, IconEye, IconGlobe, IconKeyboard, IconMoon, IconMore, IconSearch, IconSearchDoc, IconSettings, IconSun, IconTarget, IconToday } from './icons'
 
 type NavItem = { to: string; label: string; short?: string; icon: (p: React.SVGProps<SVGSVGElement>) => React.ReactElement; end?: boolean }
 
@@ -29,7 +30,7 @@ export function useTheme() {
     if (theme === 'system') root.removeAttribute('data-theme'); else root.setAttribute('data-theme', theme)
     try { localStorage.setItem('tw-theme', theme) } catch { /* storage unavailable */ }
     const dark = theme === 'dark' || (theme === 'system' && matchMedia('(prefers-color-scheme: dark)').matches)
-    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', dark ? '#0e1318' : '#f7f8fa')
+    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', dark ? '#0d0f12' : '#f5f6f8')
   }, [theme])
   return [theme, setTheme] as const
 }
@@ -81,6 +82,7 @@ export function Layout({ children }: { children: ReactNode }) {
   const searchRef = useRef<HTMLInputElement>(null)
   const me = useQuery({ queryKey: ['me'], queryFn: () => api.get<{ unread_notifications: number }>('/api/auth/me'), refetchInterval: 120_000 })
   const unread = me.data?.unread_notifications ?? 0
+  const { help, setHelp } = useShortcuts()
 
   useEffect(() => { setMore(false); setSearching(false); window.scrollTo(0, 0) }, [loc.pathname])
   useEffect(() => {
@@ -140,6 +142,7 @@ export function Layout({ children }: { children: ReactNode }) {
               <div className="desktop-search"><SearchForm inputRef={searchRef} /></div>
               <div className="spacer" />
               <button type="button" className="btn icon quiet mobile-only" aria-label="Search" onClick={() => setSearching(true)}><IconSearch /></button>
+              <button type="button" className="btn icon quiet desktop-only" aria-label="Keyboard shortcuts" title="Keyboard shortcuts (?)" onClick={() => setHelp(true)}><IconKeyboard /></button>
               <Link to="/notifications" className="btn icon quiet bell" aria-label={bellLabel}>
                 <IconBell />{unread > 0 && <span className="badge" aria-hidden="true">{unread}</span>}
               </Link>
@@ -158,6 +161,7 @@ export function Layout({ children }: { children: ReactNode }) {
           <IconMore /><span>More</span>{unread > 0 && <span className="badge" aria-label={`${unread} unread notifications`}>{unread}</span>}
         </button>
       </nav>
+      {help && <ShortcutsSheet onClose={() => setHelp(false)} />}
       {more && (
         <Sheet title="More" onClose={() => setMore(false)}>
           <nav className="navlist" aria-label="More sections">

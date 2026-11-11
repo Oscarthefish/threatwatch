@@ -53,7 +53,7 @@ export default function Notifications() {
                 {n.body && <span className="nmsg">{n.body}</span>}
               </>
               return (
-                <li key={n.id} className={`nitem ${n.read_at ? '' : 'unread'}`}>
+                <li key={n.id} data-nav className={`nitem ${n.read_at ? '' : 'unread'}`}>
                   {n.link ? <Link to={n.link} onClick={() => { if (!n.read_at) read.mutate({ ids: [n.id] }) }}>{inner}</Link> : <div className="nbody">{inner}</div>}
                 </li>
               )

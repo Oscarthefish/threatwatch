@@ -128,7 +128,7 @@ export function useBookmark() {
 export function BookmarkButton({ id, on, withLabel, compact }: { id: number; on: boolean; withLabel?: boolean; compact?: boolean }) {
   const m = useBookmark()
   return (
-    <button type="button" className={`btn ${withLabel ? '' : `icon quiet ${compact ? 'compact' : ''}`} ${on ? 'on' : ''}`} aria-pressed={on}
+    <button type="button" data-key="b" className={`btn ${withLabel ? '' : `icon quiet ${compact ? 'compact' : ''}`} ${on ? 'on' : ''}`} aria-pressed={on}
       aria-label={withLabel ? undefined : on ? 'Remove bookmark' : 'Bookmark for later'} aria-busy={m.isPending || undefined}
       onClick={(e) => { e.preventDefault(); m.mutate({ id, on: !on }) }}>
       <IconBookmark filled={on} />{withLabel && (on ? 'Bookmarked' : 'Bookmark')}
@@ -182,14 +182,14 @@ export function ActionList({ actions, ai }: { actions: SocAction[]; ai?: { actio
 // ------------------------------------------------------------ article card
 export function ArticleCard({ a, extra }: { a: ArticleBrief; extra?: ReactNode }) {
   return (
-    <article className={`acard s${a.severity} ${a.read ? 'read' : ''}`}>
+    <article data-nav className={`acard s${a.severity} ${a.read ? 'read' : ''}`}>
       <div className="acard-body">
         <div className="meta">
           <Severity level={a.severity} reasons={a.severity_reasons} />
           <span className="src">{a.source.name}</span>
           <TimeAgo iso={a.published_at} />
         </div>
-        <Link className="title" to={`/article/${a.id}`}>{a.title}</Link>
+        <Link className="title" data-open to={`/article/${a.id}`}>{a.title}</Link>
         {(a.ai_summary || a.excerpt) && <p className="excerpt">{a.ai_summary ?? a.excerpt}</p>}
         {(a.related_count > 0 || (a.region && a.region !== 'GLOBAL')) && (
           <div className="row xsmall muted mt-2">
@@ -211,7 +211,7 @@ export function ArticleCard({ a, extra }: { a: ArticleBrief; extra?: ReactNode }
 /** Compact one-line-ish row for dense dashboard lists. */
 export function ArticleRow({ a }: { a: ArticleBrief }) {
   return (
-    <div className={`arow ${a.read ? 'read' : ''}`}>
+    <div data-nav className={`arow ${a.read ? 'read' : ''}`}>
       <span className={`dot s${a.severity}`} aria-hidden="true" />
       <span className="sr-only">{SEV[a.severity]} severity.</span>
       <div className="grow">

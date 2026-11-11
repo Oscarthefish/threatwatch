@@ -12,7 +12,7 @@ export function WatchCard({ w }: { w: Watch }) {
   const fresh = w.unseen_count ?? 0
   const review = w.candidate_count ?? 0
   return (
-    <Link to={`/watch/${w.id}`} className={`card watch-card ${fresh ? 'fresh' : ''}`}>
+    <Link to={`/watch/${w.id}`} data-nav className={`card watch-card ${fresh ? 'fresh' : ''}`}>
       <div className="eyebrow mb-0">{kindLabel(w.kind)}</div>
       <div className="row between top nowrap">
         <strong className="wc-title">{w.title}</strong>
