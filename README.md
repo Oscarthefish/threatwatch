@@ -42,7 +42,11 @@ cd ../frontend && npm ci && npm run dev                 # http://localhost:5173 
 
 Tests: `cd backend && ../.venv/bin/python -m pytest -q` · Frontend type-check/build: `cd frontend && npm run build`
 
-## Production
+## Running it (current: local)
+
+`deploy/local.sh up` → http://localhost:8787, then `deploy/local.sh password` once.
+
+## Production (planned)
 
 See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md). In short: build locally, `deploy/deploy.sh <ssh-host>`,
 access privately over Tailscale (HTTPS via Tailscale Serve). Secrets live in

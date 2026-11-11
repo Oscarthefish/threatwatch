@@ -1,5 +1,34 @@
 # Deployment
 
+## Current mode: local (this Mac)
+
+Threat Watch currently runs on the development Mac with Docker Desktop:
+
+```bash
+deploy/local.sh up          # build + start → http://localhost:8787
+deploy/local.sh password    # set the login password (interactive, run once)
+deploy/local.sh status      # health, memory, source status
+deploy/local.sh backup      # → ~/Backups/threatwatch/tw-<UTC>.db.gz (14 kept)
+deploy/local.sh down        # stop; data stays in the `threatwatch_tw-data` volume
+```
+
+- Config/secrets: `~/.config/threatwatch/threatwatch.env` (mode 600, outside git). Add `ANTHROPIC_API_KEY=` there to enable AI, then `deploy/local.sh up`.
+- Bound to `127.0.0.1:8787` only — not reachable from the network or your phone.
+- Containers restart automatically whenever Docker Desktop is running. For always-on collection enable
+  Docker Desktop → Settings → General → *Start Docker Desktop when you sign in*. Collection pauses while the Mac sleeps
+  and catches up on wake (misfired jobs run once, within an hour’s grace).
+- Over plain `http://localhost`, the app runs as a normal web page; Android install / web push need the HTTPS deployment below.
+
+### Migrating to the VPS later
+1. `deploy/local.sh backup`
+2. Complete steps 1–4 below on the server (deploy creates the empty stack).
+3. `scp ~/Backups/threatwatch/tw-<STAMP>.db.gz tw-vps:/tmp/` then on the server `sudo /opt/threatwatch/restore.sh /tmp/tw-<STAMP>.db.gz`.
+   Bookmarks, follows, notes, history and the password all move with the database.
+
+---
+
+## VPS deployment (planned)
+
 Target: Ubuntu 24.04 VPS, Docker Compose, private access over Tailscale. Images are **built
 locally** and shipped over SSH — nothing is built (and no Claude Code is installed) on the server.
 

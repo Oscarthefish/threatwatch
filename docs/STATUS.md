@@ -36,7 +36,8 @@ _Last updated 2026-11-09._
 - ✅ In-app notifications
 - 🟡 PWA: manifest, icons, service worker, offline cache of viewed/saved content — built, but install/offline behaviour needs HTTPS and a real Android device to verify
 - 🟡 Web push: server + client implemented (VAPID, `pywebpush`), untested end-to-end (needs HTTPS deployment and VAPID keys)
-- ⛔ **Deployment to the VPS** — not done. The SSH host/IP placeholders in the brief were not filled in, so the server could not be inspected or reached.
+- ✅ **Local deployment** on the development Mac (`deploy/local.sh`, http://localhost:8787) — running continuously while Docker Desktop is up
+- ⛔ **Deployment to the VPS** — deferred by decision (2026-11-11); migration path documented in DEPLOYMENT.md
 - ⛔ Server hardening (deploy user, Docker install, Tailscale, firewall) — documented in DEPLOYMENT.md, requires your approval
 - ⛔ watch.thefish.nz / Cloudflare — evaluated only (SECURITY.md); no DNS or Cloudflare changes made
 
