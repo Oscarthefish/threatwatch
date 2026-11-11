@@ -364,3 +364,26 @@ def test_roundup_mention_is_minor_and_silent(conn, fixture_sources):
     ev = conn.execute("SELECT status, significance FROM watch_evidence WHERE watch_id=? AND article_id=?", (wid, aid)).fetchone()
     assert ev["status"] == "linked" and ev["significance"] == "minor"
     assert conn.execute("SELECT COUNT(*) FROM notifications WHERE watch_id=? AND article_id=?", (wid, aid)).fetchone()[0] == 0
+
+
+def test_feeds_hide_kev_announcements_but_search_finds_them(client, conn):
+    from app.db import now_iso
+    from app.ingest import pipeline
+
+    pipeline.sync_sources(conn)
+    src = conn.execute("SELECT id FROM sources LIMIT 1").fetchone()[0]
+    for i, title in enumerate(["CISA Adds Two Known Exploited Vulnerabilities to Catalog", "Example vendor patches exploited flaw"]):
+        conn.execute(
+            """INSERT INTO articles(source_id, url, canonical_url, title, title_tokens, summary_text, published_at, retrieved_at,
+                                    sections, severity, confidence, score)
+               VALUES(?,?,?,?,?,?,?,?,'["vulnerabilities"]',3,'official',50)""",
+            (src, f"https://example.com/kev-{i}", f"https://example.com/kev-{i}", title, title.lower(), "examplekevword", now_iso(), now_iso()))
+    conn.commit()
+    login(client)
+    feed = [a["title"] for a in client.get("/api/articles?section=vulnerabilities").json()["items"]]
+    assert "Example vendor patches exploited flaw" in feed
+    assert not any("Known Exploited" in t for t in feed)
+    latest = [a["title"] for a in client.get("/api/articles").json()["items"]]
+    assert not any("Known Exploited" in t for t in latest)
+    found = [a["title"] for a in client.get("/api/articles?q=examplekevword").json()["items"]]
+    assert any("Known Exploited" in t for t in found)

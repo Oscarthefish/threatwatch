@@ -398,6 +398,8 @@ def _fmt_entities(new_ents: set[tuple[str, str]]) -> str:
 
 
 _KEV_BULLETIN = re.compile(r"\badds?\b.{0,40}\bknown exploited vulnerabilit", re.I)
+# The same test in SQL, for paged feeds: CISA catalogue announcements ("CISA Adds Six Known Exploited Vulnerabilities to Catalog")
+KEV_BULLETIN_SQL = "lower(a.title) LIKE '%add%known exploited vulnerabilit%'"
 _CHANGE_TYPES = ("cve", "actor", "ransomware", "malware", "victim", *entities.IOC_TYPES)
 
 

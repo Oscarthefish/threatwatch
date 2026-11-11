@@ -131,7 +131,7 @@ there is none, so the tour never stalls.
 ## Batch 8: clarity pass (November 2026)
 | Area | Change |
 |---|---|
-| Breaking | Incidents lead the page; followed updates and a 5-item KEV preview ("Show all") sit in a rail on wide screens and stack above/below on phones. CISA KEV catalogue announcements are no longer repeated as incidents. Priority/Newest toggle with a one-line explanation of the order. |
+| Breaking | Incidents lead the page; followed updates and a 5-item KEV preview ("Show all") sit in a rail on wide screens and stack above/below on phones. CISA KEV catalogue announcements are no longer repeated as incidents, and topic feeds leave them out too (text search still finds them). Priority/Newest toggle with a one-line explanation of the order. |
 | Section headings | Kind-labelled headings (Following, Incidents, Newly exploited) with a count, so the three kinds of information never blur. |
 | Follow alerts | Each shows what changed, the sentence that matched (terms highlighted) and the report. Broad bulletins and roundups no longer present unrelated CVEs or actors as changes. |
 | Cards | Headline 17 px; metadata on one quiet line (severity, source, time, confidence, extra sources, region, date check). Excerpts end on whole words or sentences; publisher fragments are dropped. |

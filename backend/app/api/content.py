@@ -31,7 +31,7 @@ def _fts_query(q: str) -> str:
 
 
 def _list_articles(conn, *, section=None, q=None, severity_min=None, source=None, tag=None, region=None, days=None,
-                   limit=30, offset=0, collapse=True, ids=None, order="rank") -> list[dict]:
+                   limit=30, offset=0, collapse=True, ids=None, order="rank", hide_kev_bulletins=False) -> list[dict]:
     where, params = [], []
     join = ""
     if q:
@@ -64,6 +64,9 @@ def _list_articles(conn, *, section=None, q=None, severity_min=None, source=None
             return []
         where.append(f"a.id IN ({','.join('?' * len(ids))})")
         params += list(ids)
+    if hide_kev_bulletins:
+        from ..intel.watch import KEV_BULLETIN_SQL
+        where.append(f"NOT ({KEV_BULLETIN_SQL})")
     if collapse and not q and ids is None:
         where.append("(a.cluster_id = a.id OR a.cluster_id IS NULL)")
     order_sql = {"rank": "a.score DESC, a.published_at DESC", "new": "a.published_at DESC",
@@ -171,7 +174,10 @@ def list_articles(
     if section == "breaking" and not days:
         days = 3
     items = _list_articles(conn, section=section, q=q, severity_min=severity_min, source=source, tag=tag, region=region,
-                           days=days, limit=limit, offset=offset, order=order)
+                           days=days, limit=limit, offset=offset, order=order,
+                           # KEV catalogue announcements are summarised on Breaking and the Vulnerabilities page;
+                           # feeds leave them out, a text search still finds them
+                           hide_kev_bulletins=not q)
     return {"items": items, "offset": offset, "limit": limit, "has_more": len(items) == limit}
 
 

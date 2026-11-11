@@ -59,3 +59,4 @@ def test_single_subject_report_names_related_entities():
     e = _ev(title="ExampleLoader used to exploit CVE-2099-0001", summary_text="Actor X exploited CVE-2099-0001 to deploy ExampleLoader.")
     sig, why = _heuristic_assess(e, ["CVE-2099-0001"], set(), set(), {("actor", "actor x"), ("malware", "exampleloader")}, {"Example News"})
     assert sig == "important" and "actor x" in why.lower()
+
