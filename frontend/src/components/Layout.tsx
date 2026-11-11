@@ -2,6 +2,7 @@ import { useEffect, useState, type ReactNode } from 'react'
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { api } from '../api'
+import { Sheet } from './Sheet'
 import { IconBell, IconBolt, IconBookmark, IconBug, IconEye, IconGlobe, IconMoon, IconMore, IconSearch, IconSearchDoc, IconSettings, IconSun, IconTarget, IconToday } from './icons'
 
 export const NAV = [
@@ -78,14 +79,14 @@ export function Layout({ children }: { children: ReactNode }) {
         <button className={moreActive ? 'active' : ''} onClick={() => setMore(true)} aria-haspopup="dialog"><IconMore /><span>More</span>{unread > 0 && <span className="badge">{unread}</span>}</button>
       </nav>
       {more && (
-        <div className="morenav" onClick={() => setMore(false)} role="presentation">
-          <div className="sheet" role="dialog" aria-label="More sections" onClick={(e) => e.stopPropagation()}>
-            {[NAV[2], NAV[4], NAV[5], NAV[7]].map((n) => <Link key={n.to} to={n.to}><n.icon width={20} />{n.label}</Link>)}
-            <Link to="/search"><IconSearch width={20} />Search</Link>
-            <Link to="/notifications"><IconBell width={20} />Notifications {unread > 0 && <span className="badge">{unread}</span>}</Link>
-            <Link to="/settings"><IconSettings width={20} />Settings & sources</Link>
-          </div>
-        </div>
+        <Sheet title="More" onClose={() => setMore(false)}>
+          <nav className="navlist" aria-label="More sections">
+            {[NAV[2], NAV[4], NAV[5], NAV[7]].map((n) => <Link key={n.to} to={n.to}><n.icon />{n.label}</Link>)}
+            <Link to="/search"><IconSearch />Search</Link>
+            <Link to="/notifications"><IconBell />Notifications {unread > 0 && <span className="badge">{unread}</span>}</Link>
+            <Link to="/settings"><IconSettings />Settings and sources</Link>
+          </nav>
+        </Sheet>
       )}
     </div>
   )

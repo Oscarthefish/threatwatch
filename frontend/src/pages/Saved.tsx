@@ -4,6 +4,7 @@ import { api } from '../api'
 import type { ArticleBrief, Watch } from '../types'
 import { ArticleCard, Empty, ErrorBox, Loading, PageHeader, TimeAgo, useToast } from '../components/ui'
 import { WatchCard } from './Watches'
+import { useConfirm } from '../components/Sheet'
 
 type Tab = 'bookmarks' | 'following' | 'history'
 
@@ -62,6 +63,8 @@ export default function Saved() {
 
 function ClearHistory() {
   const qc = useQueryClient()
+  const confirm = useConfirm()
   const m = useMutation({ mutationFn: () => api.del('/api/history'), onSuccess: () => qc.invalidateQueries() })
-  return <div style={{ textAlign: 'center', marginTop: '1rem' }}><button className="btn danger" onClick={() => { if (confirm('Clear reading history?')) m.mutate() }}>Clear history</button></div>
+  return <div className="center mt-4"><button className="btn danger" aria-busy={m.isPending || undefined}
+    onClick={async () => { if (await confirm({ title: 'Clear reading history?', body: 'Articles will show as unread again. Bookmarks and follows are not affected.', confirmLabel: 'Clear history', danger: true })) m.mutate() }}>Clear history</button></div>
 }

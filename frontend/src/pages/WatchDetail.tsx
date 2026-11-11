@@ -5,6 +5,7 @@ import { api } from '../api'
 import type { ArticleBrief, Claim, WatchDetail, WatchRecord } from '../types'
 import { ArticleCard, CitedText, Cites, copy, Empty, ErrorBox, fmtDate, Loading, TimeAgo, useToast } from '../components/ui'
 import { IconCopy, IconRefresh } from '../components/icons'
+import { useConfirm } from '../components/Sheet'
 
 const PREFS: [string, string][] = [['important', 'Important changes immediately'], ['all', 'All meaningful new findings'], ['digest', 'Daily digest'], ['silent', 'Silent tracking']]
 type Tab = 'overview' | 'timeline' | 'evidence' | 'history' | 'notes' | 'matching'
@@ -55,6 +56,7 @@ export default function WatchPage() {
   const act = useMutation({ mutationFn: ({ aid, action }: { aid: number; action: string }) => api.post(`/api/watches/${id}/evidence/${aid}`, { action }),
     onSuccess: (_d, v) => { toast(v.action === 'link' ? 'Linked — record updated' : 'Marked not relevant'); qc.invalidateQueries() } })
   const refresh = useMutation({ mutationFn: () => api.post<{ linked: number }>(`/api/watches/${id}/refresh`), onSuccess: (r) => { toast(`Re-checked: ${r.linked} new link(s)`); qc.invalidateQueries() } })
+  const confirm = useConfirm()
   const del = useMutation({ mutationFn: () => api.del(`/api/watches/${id}`), onSuccess: () => { qc.invalidateQueries(); nav('/watch') } })
 
   if (q.isError) return <ErrorBox error={q.error} />
@@ -126,7 +128,7 @@ export default function WatchPage() {
       </>}
 
       {tab === 'notes' && <NotesForm w={w} onSave={(b) => patch.mutate(b)} />}
-      {tab === 'matching' && <MatchingForm w={w} onSave={(b) => patch.mutate(b)} onDelete={() => { if (confirm('Delete this watch and its history?')) del.mutate() }} />}
+      {tab === 'matching' && <MatchingForm w={w} onSave={(b) => patch.mutate(b)} onDelete={async () => { if (await confirm({ title: 'Stop following and delete?', body: `This permanently deletes “${w.title}”, its timeline and all record versions. Linked articles are kept.`, confirmLabel: 'Delete watch', danger: true })) del.mutate() }} />}
     </>
   )
 }

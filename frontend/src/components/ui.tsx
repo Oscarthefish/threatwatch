@@ -1,7 +1,7 @@
-import { createContext, useCallback, useContext, useState, type ReactNode } from 'react'
+import { createContext, useCallback, useContext, useEffect, useId, useRef, useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
-import { api } from '../api'
+import { api, ApiError } from '../api'
 import type { ArticleBrief } from '../types'
 import { IconBookmark, IconExternal } from './icons'
 
@@ -24,19 +24,51 @@ export const TimeAgo = ({ iso }: { iso?: string | null }) => <time dateTime={iso
 
 // -------------------------------------------------------------- severity
 const SEV = ['info', 'low', 'medium', 'high', 'critical']
+/** Severity label. With reasons it becomes a button that reveals why (works on touch; no hover-only info). */
 export function Severity({ level, reasons }: { level: number | string; reasons?: string[] }) {
   const label = typeof level === 'number' ? SEV[level] : level
-  return <span className={`sev ${label}`} title={reasons?.join('\n')}>{label}</span>
+  const [open, setOpen] = useState(false)
+  const wrap = useRef<HTMLSpanElement>(null)
+  const id = useId()
+  useEffect(() => {
+    if (!open) return
+    const out = (e: Event) => { if (!wrap.current?.contains(e.target as Node)) setOpen(false) }
+    const esc = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false) }
+    document.addEventListener('pointerdown', out); document.addEventListener('keydown', esc)
+    return () => { document.removeEventListener('pointerdown', out); document.removeEventListener('keydown', esc) }
+  }, [open])
+  if (!reasons?.length) return <span className={`sev ${label}`}>{label}</span>
+  return (
+    <span className="pop-wrap" ref={wrap}>
+      <button type="button" className={`sev ${label}`} aria-expanded={open} aria-controls={id}
+        aria-label={`Severity ${label}. Show reasons`} onClick={(e) => { e.preventDefault(); setOpen(!open) }}><span>{label}</span></button>
+      {open && <span className="popover" id={id} role="note">
+        <span className="pop-title">Why {label}</span>
+        <ul>{reasons.map((r) => <li key={r}>{r}</li>)}</ul>
+      </span>}
+    </span>
+  )
 }
-const CONF: Record<string, string> = { official: 'Official source', corroborated: 'Corroborated (3+ sources)', 'multi-source': '2 sources', 'single-source': 'Single source' }
-export const Confidence = ({ value }: { value: string }) => <span className={`conf ${value}`} title="Confidence based on source authority and independent corroboration">{CONF[value] ?? value}</span>
+const CONF: Record<string, string> = { official: 'Official source', corroborated: 'Corroborated by 3+ sources', 'multi-source': '2 sources', 'single-source': 'Single source' }
+export const Confidence = ({ value }: { value: string }) => <span className={`conf ${value}`}>{CONF[value] ?? value}</span>
 
 // ----------------------------------------------------------------- toast
-const ToastCtx = createContext<(m: string) => void>(() => {})
+type Tone = 'info' | 'error'
+const ToastCtx = createContext<(m: string, tone?: Tone) => void>(() => {})
 export function ToastProvider({ children }: { children: ReactNode }) {
-  const [msg, setMsg] = useState<string | null>(null)
-  const show = useCallback((m: string) => { setMsg(m); window.setTimeout(() => setMsg(null), 2600) }, [])
-  return <ToastCtx.Provider value={show}>{children}{msg && <div className="toast" role="status">{msg}</div>}</ToastCtx.Provider>
+  const [msg, setMsg] = useState<{ text: string; tone: Tone } | null>(null)
+  const timer = useRef<number | undefined>(undefined)
+  const show = useCallback((text: string, tone: Tone = 'info') => {
+    setMsg({ text, tone }); window.clearTimeout(timer.current)
+    timer.current = window.setTimeout(() => setMsg(null), tone === 'error' ? 6000 : 3000)
+  }, [])
+  return (
+    <ToastCtx.Provider value={show}>
+      {children}
+      <div aria-live="polite" role="status" className="sr-only">{msg?.text}</div>
+      {msg && <div className={`toast ${msg.tone === 'error' ? 'error' : ''}`} aria-hidden="true">{msg.text}</div>}
+    </ToastCtx.Provider>
+  )
 }
 export const useToast = () => useContext(ToastCtx)
 
@@ -47,9 +79,40 @@ export function Loading({ lines = 4 }: { lines?: number }) {
 export function Empty({ title, children }: { title: string; children?: ReactNode }) {
   return <div className="empty"><h3>{title}</h3>{children && <div>{children}</div>}</div>
 }
-export function ErrorBox({ error }: { error: unknown }) {
-  const msg = error instanceof Error ? error.message : 'Something went wrong'
-  return <div className="card error" role="alert">Couldn’t load: {msg}. {navigator.onLine ? '' : 'You appear to be offline — showing cached data where available.'}</div>
+function explain(error: unknown): { what: string; fix: string } {
+  if (!navigator.onLine) return { what: 'You are offline.', fix: 'Cached pages still work. This view will load when you reconnect.' }
+  if (error instanceof ApiError) {
+    if (error.status === 404) return { what: 'This item could not be found.', fix: 'It may have been removed by the retention policy. Go back and pick another item.' }
+    if (error.status === 401) return { what: 'Your session has ended.', fix: 'Sign in again to continue.' }
+    if (error.status === 429) return { what: 'Too many requests.', fix: 'Wait a minute, then try again.' }
+    if (error.status === 503) return { what: error.message, fix: 'Try again shortly.' }
+    if (error.status >= 500) return { what: 'The Threat Watch server hit an error.', fix: 'Try again. If it keeps happening, check the container logs (deploy/local.sh logs).' }
+    return { what: error.message, fix: 'Try again.' }
+  }
+  return { what: 'The server could not be reached.', fix: 'Check that Threat Watch is running, then try again.' }
+}
+export function ErrorBox({ error, onRetry }: { error: unknown; onRetry?: () => void }) {
+  const { what, fix } = explain(error)
+  return (
+    <div className="alert" role="alert">
+      <div className="grow">
+        <h3>{what}</h3>
+        <p>{fix}</p>
+        {onRetry && <button type="button" className="btn small" onClick={onRetry}>Try again</button>}
+      </div>
+    </div>
+  )
+}
+
+/** Labelled form field with optional hint and inline error. The label is always visible. */
+export function Field({ label, hint, error, children }: { label: string; hint?: ReactNode; error?: string | null; children: ReactNode }) {
+  return (
+    <label className="field">
+      <span>{label}</span>
+      {children}
+      {error ? <span className="field-error" role="alert">{error}</span> : hint ? <span className="field-hint">{hint}</span> : null}
+    </label>
+  )
 }
 
 // --------------------------------------------------------------- bookmark
@@ -59,14 +122,15 @@ export function useBookmark() {
   return useMutation({
     mutationFn: ({ id, on }: { id: number; on: boolean }) => on ? api.put(`/api/bookmarks/${id}`, { note: '', tags: [] }) : api.del(`/api/bookmarks/${id}`),
     onSuccess: (_d, v) => { toast(v.on ? 'Bookmarked' : 'Bookmark removed'); qc.invalidateQueries() },
-    onError: () => toast('Could not update bookmark'),
+    onError: () => toast('Bookmark not saved. Check your connection and try again.', 'error'),
   })
 }
-export function BookmarkButton({ id, on, withLabel }: { id: number; on: boolean; withLabel?: boolean }) {
+export function BookmarkButton({ id, on, withLabel, compact }: { id: number; on: boolean; withLabel?: boolean; compact?: boolean }) {
   const m = useBookmark()
   return (
-    <button className={`btn ${withLabel ? '' : 'icon ghost'} ${on ? 'on' : ''}`} aria-pressed={on} aria-label={on ? 'Remove bookmark' : 'Bookmark'}
-      title={on ? 'Remove bookmark' : 'Bookmark (read later)'} disabled={m.isPending} onClick={(e) => { e.preventDefault(); m.mutate({ id, on: !on }) }}>
+    <button type="button" className={`btn ${withLabel ? '' : `icon quiet ${compact ? 'compact' : ''}`} ${on ? 'on' : ''}`} aria-pressed={on}
+      aria-label={withLabel ? undefined : on ? 'Remove bookmark' : 'Bookmark for later'} aria-busy={m.isPending || undefined}
+      onClick={(e) => { e.preventDefault(); m.mutate({ id, on: !on }) }}>
       <IconBookmark filled={on} />{withLabel && (on ? 'Bookmarked' : 'Bookmark')}
     </button>
   )
@@ -81,11 +145,11 @@ export function ArticleCard({ a, extra }: { a: ArticleBrief; extra?: ReactNode }
         <span>{a.source.name}</span>
         <span>·</span>
         <TimeAgo iso={a.published_at} />
-        {a.related_count > 0 && <span className="chip" title="Other sources reporting the same story">+{a.related_count} source{a.related_count > 1 ? 's' : ''}</span>}
+        {a.related_count > 0 && <span className="chip">+{a.related_count} more source{a.related_count > 1 ? 's' : ''}</span>}
         {a.region && a.region !== 'GLOBAL' && <span className="chip">{a.region}</span>}
         <span className="actions">
-          <a className="btn icon ghost" href={a.url} target="_blank" rel="noopener noreferrer" aria-label="Open original source" title="Open original"><IconExternal /></a>
-          <BookmarkButton id={a.id} on={a.bookmarked} />
+          <a className="btn icon quiet compact" href={a.url} target="_blank" rel="noopener noreferrer" aria-label={`Open original on ${a.source.name}`}><IconExternal /></a>
+          <BookmarkButton id={a.id} on={a.bookmarked} compact />
         </span>
       </div>
       <Link className="title" to={`/article/${a.id}`}>{a.title}</Link>
@@ -99,12 +163,13 @@ export function ArticleCard({ a, extra }: { a: ArticleBrief; extra?: ReactNode }
 export function ArticleRow({ a }: { a: ArticleBrief }) {
   return (
     <div className={`arow ${a.read ? 'read' : ''}`}>
-      <span className={`dot s${a.severity}`} title={`${['Info', 'Low', 'Medium', 'High', 'Critical'][a.severity]}: ${a.severity_reasons.join('; ')}`} />
+      <span className={`dot s${a.severity}`} aria-hidden="true" />
+      <span className="sr-only">{SEV[a.severity]} severity.</span>
       <div className="grow">
         <Link className="t" to={`/article/${a.id}`}>{a.title}</Link>
         <div className="m">{a.source.name} · <TimeAgo iso={a.published_at} />{a.related_count > 0 && <> · +{a.related_count} source{a.related_count > 1 ? 's' : ''}</>}{a.region && a.region !== 'GLOBAL' && <> · {a.region}</>}</div>
       </div>
-      <BookmarkButton id={a.id} on={a.bookmarked} />
+      <BookmarkButton id={a.id} on={a.bookmarked} compact />
     </div>
   )
 }
@@ -121,7 +186,7 @@ export function CitedText({ text }: { text: string }) {
   const parts = text.split(/(\[E\d+\])/g)
   return <>{parts.map((p, i) => {
     const m = p.match(/^\[E(\d+)\]$/)
-    return m ? <Link key={i} className="cite" to={`/article/${m[1]}`} title="Open source evidence">E{m[1]}</Link> : <span key={i}>{p}</span>
+    return m ? <Link key={i} className="cite" to={`/article/${m[1]}`} aria-label={`Source E${m[1]}`}>E{m[1]}</Link> : <span key={i}>{p}</span>
   })}</>
 }
 export function Cites({ ids }: { ids: number[] }) {
@@ -130,13 +195,13 @@ export function Cites({ ids }: { ids: number[] }) {
 
 export function PageHeader({ title, sub, actions }: { title: string; sub?: ReactNode; actions?: ReactNode }) {
   return (
-    <div className="row between" style={{ marginBottom: '.75rem', alignItems: 'flex-start' }}>
-      <div className="grow"><h1>{title}</h1>{sub && <div className="muted small">{sub}</div>}</div>
+    <div className="row between top mb-4">
+      <div className="grow"><h1>{title}</h1>{sub && <p className="muted small measure mb-0">{sub}</p>}</div>
       {actions && <div className="row">{actions}</div>}
     </div>
   )
 }
 
-export function copy(text: string, toast: (m: string) => void) {
-  navigator.clipboard?.writeText(text).then(() => toast('Copied'), () => toast('Copy failed'))
+export function copy(text: string, toast: (m: string, tone?: 'info' | 'error') => void) {
+  navigator.clipboard?.writeText(text).then(() => toast('Copied to clipboard'), () => toast('Copy blocked by the browser. Select the text and copy it manually.', 'error'))
 }

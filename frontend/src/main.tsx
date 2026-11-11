@@ -5,6 +5,7 @@ import { BrowserRouter } from 'react-router-dom'
 import { ApiError } from './api'
 import App from './App'
 import { ToastProvider } from './components/ui'
+import { ConfirmProvider } from './components/Sheet'
 import './index.css'
 
 const queryClient = new QueryClient({
@@ -38,7 +39,9 @@ createRoot(document.getElementById('root')!).render(
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
         <ToastProvider>
-          <App />
+          <ConfirmProvider>
+            <App />
+          </ConfirmProvider>
         </ToastProvider>
       </BrowserRouter>
     </QueryClientProvider>
