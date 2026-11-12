@@ -25,3 +25,6 @@ frontend/dist/
 .DS_Store
 .idea/
 .vscode/
+
+# Private deployment notes (server IP, tailnet name)
+*.local.md
