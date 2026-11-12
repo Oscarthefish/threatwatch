@@ -27,6 +27,27 @@ deploy/local.sh down        # stop; data stays in the `threatwatch_tw-data` volu
 
 ---
 
+## Live server (since 2026-11-13)
+
+| | |
+|---|---|
+| Host | DigitalOcean droplet `threatwatch`, Sydney, Ubuntu 24.04 LTS, 1 vCPU / 1 GB + 1 GB swap / 25 GB |
+| Public IP | `<SERVER_IP>` (see docs/DEPLOYMENT.local.md) (only SSH 22 and Tailscale 41641/udp open; ufw default deny) |
+| Host key | ED25519 `SHA256:<fingerprint>` (verify against the droplet console: `ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub`) |
+| App URL | https://threatwatch.<tailnet>.ts.net (Tailscale Serve, tailnet only; app bound to 127.0.0.1:8080) |
+| SSH | `ssh tw-vps` (user `deploy`, docker group) and `ssh tw-root` (key only, no passwords); key `~/.ssh/threatwatch_ed25519` |
+| Settings | `/etc/threatwatch/threatwatch.env` (root:deploy 640) |
+| Backups | nightly 03:15 NZ (`threatwatch-backup.timer`) to `/var/backups/threatwatch`, 14 kept |
+
+Common tasks from the repo on the Mac:
+```bash
+deploy/deploy.sh tw-vps                                            # ship the current commit
+deploy/rollback.sh tw-vps                                          # previous image
+ssh tw-vps 'cd /opt/threatwatch && docker compose logs --tail 50 worker'
+scp 'tw-root:/var/backups/threatwatch/*.gz' ~/Backups/threatwatch/  # copy backups off the server
+ssh -t tw-vps 'cd /opt/threatwatch && docker compose exec web python -m app.cli set-password analyst'
+```
+
 ## VPS deployment (planned)
 
 Target: Ubuntu 24.04 VPS, Docker Compose, private access over Tailscale. Images are **built
