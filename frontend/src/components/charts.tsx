@@ -181,7 +181,7 @@ export function RankBars({ rows, unit, partialWeeks = 0, showPrev = true, nowLab
   )
 }
 
-export interface MoveRow { key: string; name: string; sub: string; before: number; now: number; href?: string }
+export interface MoveRow { key: string; name: string; sub: string; before: number; now: number; change?: number; href?: string }
 
 /** Before -> after per item (share of stories), on one shared 0..max axis. */
 export function Dumbbells({ rows }: { rows: MoveRow[] }) {
@@ -190,7 +190,7 @@ export function Dumbbells({ rows }: { rows: MoveRow[] }) {
     <ol className="dumb">
       {rows.map((r) => {
         const a = (r.before / max) * 100, b = (r.now / max) * 100
-        const d = r.now - r.before
+        const d = r.change ?? r.now - r.before  // the server's exact change; rounded shares can differ by 0.1
         return (
           <li key={r.key}>
             <div className="rank-name">

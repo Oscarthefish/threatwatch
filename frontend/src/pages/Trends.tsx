@@ -40,7 +40,7 @@ function Body({ t }: { t: T }) {
       {t.current_partial && (
         <p className="notice coverage" role="note">
           <strong>Coverage.</strong> Collection began on {longDay(t.coverage_start)}. Stories dated earlier come from feed backlogs, which only hold each
-          source's newest items, so those periods are incomplete and shaded in the charts. Rising and falling compare each subject's
+          source's newest items, so those periods are incomplete and shaded in the charts. Rising and falling compare each subject's{' '}
           <Term id="share">share of all stories</Term>, which corrects for that, but treat them as indicative until {longDay(reliableFrom)}. CISA KEV figures are complete.
         </p>
       )}
@@ -87,9 +87,9 @@ function Body({ t }: { t: T }) {
                 {t.comparison_indicative && ' Indicative: the earlier period is partly from feed backlogs.'}
               </p>
               {t.rising.length > 0 && <><h3 className="mini-h">Rising</h3>
-                <Dumbbells rows={t.rising.map((m) => ({ key: m.type + m.name, name: m.name, sub: TYPE[m.type], before: m.prev_share, now: m.share, href: href(m) }))} /></>}
+                <Dumbbells rows={t.rising.map((m) => ({ key: m.type + m.name, name: m.name, sub: TYPE[m.type], before: m.prev_share, now: m.share, change: m.change, href: href(m) }))} /></>}
               {t.falling.length > 0 && <><h3 className="mini-h">Falling</h3>
-                <Dumbbells rows={t.falling.map((m) => ({ key: m.type + m.name, name: m.name, sub: TYPE[m.type], before: m.prev_share, now: m.share, href: href(m) }))} /></>}
+                <Dumbbells rows={t.falling.map((m) => ({ key: m.type + m.name, name: m.name, sub: TYPE[m.type], before: m.prev_share, now: m.share, change: m.change, href: href(m) }))} /></>}
               {!t.rising.length && !t.falling.length && <p className="small muted mb-0">No subject moved by a point or more.</p>}
               <DataTable caption="Rising and falling subjects" head={['Subject', 'Type', `Share, ${prevLabel}`, 'Share now', 'Change (points)', 'Stories now', 'Stories before']}
                 rows={[...t.rising, ...t.falling].map((m) => [m.name, TYPE[m.type], `${m.prev_share}%`, `${m.share}%`, m.change > 0 ? `+${m.change}` : m.change, m.cur, m.prev])} />

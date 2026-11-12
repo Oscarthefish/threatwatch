@@ -13,6 +13,8 @@ from datetime import date, datetime, timedelta, timezone
 _ENTITY = re.compile(r"&(#\d{1,6}|#x[0-9a-fA-F]{1,6}|[a-zA-Z]{2,8});")
 # Publisher truncation markers at the end of feed summaries: "[…]", "...", "Read more"
 _TRAIL = re.compile(r"\s*(\[\s*(?:…|\.\.\.)\s*\]|\.\.\.|…|\(more\.*\)|read more\.?|continue reading\.?|the post .{0,120} appeared first on .{0,80}\.?)\s*$", re.I)
+# Link labels some publishers put before the summary (CISA ICS advisories: "View CSAF Summary ...")
+_LEAD_BOILERPLATE = re.compile(r"^\s*(?:view csaf summary|view csaf|csaf summary)\s*[:\-–]?\s*", re.I)
 _SENT = re.compile(r"(?<=[.!?])[\"'”’)]?\s+(?=[\"'“(]?[A-Z0-9])")
 
 
@@ -28,7 +30,7 @@ def unescape_all(s: str | None) -> str:
 
 def excerpt(text: str | None, limit: int = 280) -> str:
     """A readable excerpt: whole words, preferring a sentence end, with one ellipsis when shortened."""
-    t = re.sub(r"\s+", " ", unescape_all(text)).strip()
+    t = _LEAD_BOILERPLATE.sub("", re.sub(r"\s+", " ", unescape_all(text)).strip())
     stripped = _TRAIL.sub("", t)
     cut_by_publisher = stripped != t
     t = stripped.rstrip(" ,;:-–")
@@ -150,3 +152,8 @@ def date_notes(title: str, published_at: str | None, retrieved_at: str | None, n
                 notes.append(f"The title says {m.group(0).strip()}, but it was published {_fmt(pub_local)}. Check the source for the correct date.")
                 break
     return notes
+
+
+def strip_lead(text: str) -> str:
+    """Remove publisher link labels at the start of a summary ("View CSAF Summary")."""
+    return _LEAD_BOILERPLATE.sub("", text or "")

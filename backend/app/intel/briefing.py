@@ -50,7 +50,8 @@ _TRAIL = re.compile(r"\s*(\[(…|\.\.\.)\]|…|The post .*? appeared first on .*
 def _excerpt(text: str, limit: int = 260) -> str:
     """Lead sentence(s) of a feed excerpt: drop '[…]' / 'The post … appeared first on …' boilerplate and any
     sentence fragment the publisher's own truncation left behind ("… OpenSSH is t…")."""
-    t = " ".join(text.split())
+    from .text import strip_lead
+    t = strip_lead(" ".join(text.split()))
     truncated = bool(re.search(r"(\[(…|\.\.\.)\]|…|\.\.\.)$", t)) or len(t) > limit
     t = _TRAIL.sub("", t).rstrip(" .…")
     if not truncated:

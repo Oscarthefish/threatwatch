@@ -72,7 +72,7 @@ function TrendsPanel() {
             rows={t.volume.map((v, i) => [cols[i].title, v.critical, v.high, v.other, v.partial ? 'No' : 'Yes'])} />
           {moves.length > 0 && <>
             <h3 className="mini-h">Biggest movers <span className="faint">(share of stories{t.comparison_indicative ? ', indicative' : ''})</span></h3>
-            <Dumbbells rows={moves.map((m) => ({ key: m.type + m.name, name: m.name, sub: TYPE[m.type], before: m.prev_share, now: m.share, href: href(m) }))} />
+            <Dumbbells rows={moves.map((m) => ({ key: m.type + m.name, name: m.name, sub: TYPE[m.type], before: m.prev_share, now: m.share, change: m.change, href: href(m) }))} />
             <p className="xsmall muted mb-0 mt-2"><span className="key before" aria-hidden="true" /> previous 30 days <span className="key now" aria-hidden="true" /> last 30 days</p>
           </>}
           {t.groups.length > 0 && <>

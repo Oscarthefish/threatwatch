@@ -60,3 +60,9 @@ def test_single_subject_report_names_related_entities():
     sig, why = _heuristic_assess(e, ["CVE-2099-0001"], set(), set(), {("actor", "actor x"), ("malware", "exampleloader")}, {"Example News"})
     assert sig == "important" and "actor x" in why.lower()
 
+
+
+def test_publisher_link_labels_are_dropped_from_excerpts():
+    from app.intel.briefing import _excerpt
+    assert text.excerpt("View CSAF Summary Example Corp has released updates.") == "Example Corp has released updates."
+    assert _excerpt("View CSAF Summary Example Corp has released updates.").startswith("Example Corp")
