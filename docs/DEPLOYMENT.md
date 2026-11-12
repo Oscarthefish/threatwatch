@@ -38,15 +38,29 @@ deploy/local.sh down        # stop; data stays in the `threatwatch_tw-data` volu
 | SSH | `ssh tw-vps` (user `deploy`, docker group) and `ssh tw-root` (key only, no passwords); key `~/.ssh/threatwatch_ed25519` |
 | Settings | `/etc/threatwatch/threatwatch.env` (root:deploy 640) |
 | Backups | nightly 03:15 NZ (`threatwatch-backup.timer`) to `/var/backups/threatwatch`, 14 kept |
+| Off-server copies | Mac LaunchAgent `nz.thefish.threatwatch-backup-pull` daily 09:00 (or on wake) → `~/Backups/threatwatch/server`, 30 kept, gzip-checked, notification on failure; log `~/Library/Logs/threatwatch-backup-pull.log` |
 
 Common tasks from the repo on the Mac:
 ```bash
 deploy/deploy.sh tw-vps                                            # ship the current commit
 deploy/rollback.sh tw-vps                                          # previous image
 ssh tw-vps 'cd /opt/threatwatch && docker compose logs --tail 50 worker'
-scp 'tw-root:/var/backups/threatwatch/*.gz' ~/Backups/threatwatch/  # copy backups off the server
+deploy/pull-backups.sh                                             # copy new server backups to the Mac now
 ssh -t tw-vps 'cd /opt/threatwatch && docker compose exec web python -m app.cli set-password analyst'
 ```
+
+### Off-server backups (Mac)
+The server keeps 14 nightly backups, which would be lost with the droplet. The Mac pulls them daily as the non-root
+`deploy` user (the backup folder is `root:deploy 750`, files `640`):
+```bash
+D="$HOME/Library/Application Support/ThreatWatch"; mkdir -p "$D"
+install -m 755 deploy/pull-backups.sh "$D/pull-backups.sh"       # outside ~/Desktop: background jobs cannot read it
+sed "s#__HOME__#$HOME#g" deploy/nz.thefish.threatwatch-backup-pull.plist > ~/Library/LaunchAgents/nz.thefish.threatwatch-backup-pull.plist
+launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/nz.thefish.threatwatch-backup-pull.plist
+launchctl kickstart -k gui/$(id -u)/nz.thefish.threatwatch-backup-pull   # run once now
+```
+Re-run the `install` line after changing `deploy/pull-backups.sh`. Remove with
+`launchctl bootout gui/$(id -u)/nz.thefish.threatwatch-backup-pull` and delete the plist.
 
 ## VPS deployment (planned)
 
