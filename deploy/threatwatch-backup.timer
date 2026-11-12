@@ -2,7 +2,7 @@
 Description=Daily Threat Watch backup
 
 [Timer]
-OnCalendar=*-*-* 03:15:00
+OnCalendar=*-*-* 03:15:00 Pacific/Auckland
 RandomizedDelaySec=600
 Persistent=true
 
