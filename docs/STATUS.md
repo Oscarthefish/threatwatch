@@ -36,12 +36,19 @@ _Last updated 2026-11-09._
 - ✅ Production Compose verified locally: both services healthy, data persists across restarts, auth enforced, backup command works
 - ✅ Deploy / rollback / backup / restore scripts, systemd backup timer, read-only server inspection script
 - ✅ In-app notifications
-- 🟡 PWA: manifest, icons, service worker, offline cache of viewed/saved content — built, but install/offline behaviour needs HTTPS and a real Android device to verify
-- 🟡 Web push: server + client implemented (VAPID, `pywebpush`), untested end-to-end (needs HTTPS deployment and VAPID keys)
-- ✅ **Local deployment** on the development Mac (`deploy/local.sh`, http://localhost:8787) — running continuously while Docker Desktop is up
-- ⛔ **Deployment to the VPS** — deferred by decision (2026-11-11); migration path documented in DEPLOYMENT.md
-- ⛔ Server hardening (deploy user, Docker install, Tailscale, firewall) — documented in DEPLOYMENT.md, requires your approval
-- ⛔ watch.thefish.nz / Cloudflare — evaluated only (SECURITY.md); no DNS or Cloudflare changes made
+- ✅ PWA: manifest, icons, service worker, offline cache of viewed/saved content; installed and signed in on a real Android phone (Pixel 7 Pro) over Tailscale HTTPS
+- ✅ Web push: VAPID keys generated on the server (never displayed); test notifications delivered to the Android phone; expired subscriptions are pruned automatically
+- ✅ Local deployment on the development Mac (`deploy/local.sh`); stopped since the move to the server, data kept
+- ✅ **Server deployment (2026-11-13):** DigitalOcean droplet (Sydney, 1 GB), host key verified out of band, data restored from the Mac and integrity-checked, health and security headers checked over HTTPS, app unreachable from the public internet
+- ✅ Server hardening: non-root deploy user (key only), Docker from the official repository with log limits, swap, Tailscale Serve, ufw (SSH and Tailscale only), SSH without passwords
+- ✅ Backups: nightly on the server (14 kept) and a daily copy to the Mac (30 kept, integrity-checked)
+- ⛔ Public watch.thefish.nz: not wanted for now (access is private via Tailscale); no DNS changes made
+
+## Phase 5: Clarity, trends and reference
+- ✅ Desktop and mobile redesign (8 batches), keyboard shortcuts, guided tour, glossary; WCAG 2.2 AA with 0 axe violations across 126 page views
+- ✅ Breaking reorganised; follow alerts count only facts stated alongside the subject; search passages highlighted; date checks
+- ✅ Trends page and Today panel; threat group profiles with weekly charts
+- ✅ MITRE ATT&CK groups and software synced weekly; technique links; further reading from CVE records and KEV
 
 ## Known limitations
 - Sources are defined in code (`backend/app/ingest/sources.py`); the UI can enable/disable them but not add new ones.
