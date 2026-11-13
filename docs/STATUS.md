@@ -16,7 +16,7 @@ _Last updated 2026-11-09._
 - ✅ Exact dedupe (canonical URL + GUID) and cross-source near-duplicate clustering
 - ✅ Severity (with stated reasons), confidence (source authority + corroboration), ranking
 - ✅ Daily briefing at 07:00 Pacific/Auckland, with source citations (deterministic mode verified live)
-- 🟡 AI summaries / AI briefing / AI watch updates / AI match adjudication — implemented and tested with a mocked Anthropic client (caching, budget, refusal, citation filtering, grounding). **Not exercised against the live API**, because no API key was provided.
+- ✅ AI (live since 2026-11-13): Claude Haiku 5.5 for story summaries and extraction (about US$0.0008 a story), Claude Sonnet 5.5 for the briefing, followed-item records and match decisions; per-model pricing, US$0.50/day hard cap, cache by input hash, citation filtering and grounding. Both tiers verified against the live API on the server.
 - ✅ Article detail: summary/why it matters/technical (AI when configured), source text, publication + retrieval times, entities, IOCs, CVE facts, related coverage, bookmark & follow
 - ✅ Full-text search and filters (section, topic tag, region, severity, time, sort)
 - ✅ Vulnerabilities: KEV, EPSS, CVSS, affected products, references, linked reporting
