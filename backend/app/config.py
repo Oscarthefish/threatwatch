@@ -28,7 +28,10 @@ class Settings(BaseSettings):
     timezone: str = "Pacific/Auckland"
 
     # Ingestion
-    ingest_interval_minutes: int = 30
+    # Push notifications are held in this window (Pacific/Auckland) and summarised in one push when it ends.
+    # "HH:MM-HH:MM", may cross midnight; empty disables.
+    quiet_hours: str = "21:30-06:30"
+    ingest_interval_minutes: int = 120  # feeds such as The Record keep only ~5 items; stay under 3 h
     briefing_hour: int = 7
     briefing_minute: int = 0
     http_timeout_seconds: float = 20.0
@@ -41,13 +44,16 @@ class Settings(BaseSettings):
     # AI (optional; app works without it)
     ai_provider: str = "anthropic"  # "anthropic" or "none"
     anthropic_api_key: SecretStr | None = Field(default=None, validation_alias="ANTHROPIC_API_KEY")
-    ai_model: str = "claude-opus-5-5"
+    # Two tiers: "fast" for high-volume per-story summaries and extraction, "deep" for the daily briefing,
+    # followed-item records and match decisions. Prices per model live in app/intel/ai.py (PRICES).
+    ai_model_fast: str = "claude-haiku-5-5"
+    ai_model: str = "claude-sonnet-5-5"
     ai_effort: str = "low"  # low effort is ample for summarisation / extraction
-    ai_daily_budget_usd: float = 2.00
+    ai_daily_budget_usd: float = 0.50  # hard stop; AI pauses until the next UTC day
     ai_max_requests_per_run: int = 40
-    ai_input_usd_per_mtok: float = 4.00
-    ai_output_usd_per_mtok: float = 20.00
-    ai_server_fallback: bool = True  # server-side refusal fallback (beta)
+    ai_input_usd_per_mtok: float = 2.00   # only used for a model missing from PRICES
+    ai_output_usd_per_mtok: float = 10.00
+    ai_server_fallback: bool = True  # server-side refusal fallback (beta); skipped for models without it (Haiku)
 
     # Web push (optional; requires HTTPS deployment)
     vapid_public_key: str | None = None

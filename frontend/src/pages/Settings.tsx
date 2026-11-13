@@ -8,8 +8,8 @@ import { useStartTour } from '../components/Tour'
 
 interface Status {
   counts: Record<string, number>; db_bytes: number; last_ingest_at: string | null; worker_heartbeat: string | null
-  ai: { enabled: boolean; model: string; spent_usd: number; budget_usd: number; requests: number; failures: number }
-  ingest_interval_minutes: number; briefing_time: string; push_configured: boolean; retention_days: number; timezone: string
+  ai: { enabled: boolean; model: string; model_fast: string; spent_usd: number; budget_usd: number; requests: number; failures: number }
+  ingest_interval_minutes: number; briefing_time: string; push_configured: boolean; retention_days: number; timezone: string; quiet_hours: string
   sources: { total: number; failing: string[] }
 }
 
@@ -105,7 +105,8 @@ export default function Settings({ onLogout }: { onLogout: () => void }) {
             <div className="body">
               {st.isError ? <ErrorBox error={st.error} onRetry={() => st.refetch()} /> : !s ? <Loading lines={3} /> : <>
                 <dl className="kv mb-3">
-                  <dt>Last run</dt><dd><TimeAgo iso={s.last_ingest_at} /> <span className="muted">· every {s.ingest_interval_minutes} minutes</span></dd>
+                  <dt>Last run</dt><dd><TimeAgo iso={s.last_ingest_at} /> <span className="muted">· {every(s.ingest_interval_minutes)}, around the clock</span></dd>
+                  <dt>Quiet hours</dt><dd>{s.quiet_hours ? <>{s.quiet_hours.replace('-', ' to ')} <span className="muted">· push alerts wait, then arrive as one summary</span></> : 'Off'}</dd>
                   <dt>Sources</dt><dd>{s.sources.total - s.sources.failing.length} of {s.sources.total} healthy{s.sources.failing.length ? <span className="error">. Failing: {s.sources.failing.join(', ')}</span> : ''}</dd>
                   <dt>Daily briefing</dt><dd>{s.briefing_time.replace('Pacific/Auckland', 'NZ time')}</dd>
                   {!workerOk && <><dt>Collector</dt><dd className="error">{s.worker_heartbeat ? <>Last heartbeat <TimeAgo iso={s.worker_heartbeat} />.</> : 'No heartbeat recorded.'} Check the worker container with <code>deploy/local.sh status</code>.</dd></>}
@@ -166,7 +167,7 @@ export default function Settings({ onLogout }: { onLogout: () => void }) {
             <div className="body">
               {!s ? <Loading lines={2} /> : s.ai.enabled ? <>
                 <dl className="kv mb-2">
-                  <dt>Model</dt><dd className="mono">{s.ai.model}</dd>
+                  <dt>Models</dt><dd><span className="mono">{s.ai.model_fast}</span> <span className="muted">for story summaries</span><br /><span className="mono">{s.ai.model}</span> <span className="muted">for the briefing and followed items</span></dd>
                   <dt>Today</dt><dd>${s.ai.spent_usd.toFixed(2)} of ${s.ai.budget_usd.toFixed(2)} · {s.ai.requests} request{s.ai.requests === 1 ? '' : 's'}{s.ai.failures ? `, ${s.ai.failures} failed` : ''}</dd>
                 </dl>
                 <div className="meter" role="meter" aria-label="Daily AI budget used" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(budgetPct)}><i style={{ width: `${budgetPct}%` }} /></div>

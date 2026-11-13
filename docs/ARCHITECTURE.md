@@ -60,13 +60,13 @@ backend/app/
 
 ## Ingestion
 
-Every 30 minutes (per-source intervals respected, failing sources back off exponentially up to 6 h):
+Every 2 hours, around the clock (`TW_INGEST_INTERVAL_MINUTES`; feeds such as The Record keep only their newest 5 items, so gaps must stay under about 3 hours; per-source intervals respected, failing sources back off exponentially up to 6 h):
 
 1. Fetch with ETag/Last-Modified; cap 60 newest items/fetch, ignore items older than 60 days.
 2. Exact dedupe by canonical URL (tracking params stripped) and source GUID. Original URL kept.
 3. Extract entities, ensure CVE stubs exist, classify (sections, tags, severity + reasons).
 4. Near-duplicate clustering across *different* sources (title Jaccard + shared strong entities; template titles with disjoint entities are never merged). Cluster size drives confidence (`official` / `multi-source` / `corroborated` / `single-source`).
-5. KEV (hourly), EPSS (twice daily, batched 100 CVEs/request), CVE.org enrichment (≤60 CVEs/run, 1 req/s/host).
+5. KEV (each run), EPSS (twice daily, batched 100 CVEs/request), CVE.org enrichment (≤60 CVEs/run, 1 req/s/host).
 6. Optional AI summaries for the top-ranked new cluster representatives.
 7. Match new articles against active watches.
 

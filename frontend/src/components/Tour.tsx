@@ -21,7 +21,7 @@ const firstArticle = () => location.pathname.startsWith('/article/') ? location.
 
 export const STEPS: Step[] = [
   { section: 'Welcome', route: '/', title: 'Welcome to Threat Watch',
-    body: <>Threat Watch collects security reporting from public sources every 30 minutes, rates each story with stated reasons, and keeps a record of anything you follow. This tour takes about three minutes. Use the buttons or the arrow keys; Esc leaves at any time. You can restart it from Settings.</> },
+    body: <>Threat Watch collects security reporting from public sources every two hours, rates each story with stated reasons, and keeps a record of anything you follow. This tour takes about three minutes. Use the buttons or the arrow keys; Esc leaves at any time. You can restart it from Settings.</> },
   { section: 'Today', route: '/', target: ['.tiles'], title: 'The day at a glance',
     body: <>Each number links to the list behind it: new reporting since your last visit, critical and high stories in the last 24 hours, new CISA KEV entries, followed items with news, and how many sources are collecting.</> },
   { section: 'Today', route: '/', target: ['section[aria-labelledby="brief-h"]'], title: 'Daily briefing',

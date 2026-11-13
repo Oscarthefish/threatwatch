@@ -14,6 +14,7 @@ def env(tmp_path, monkeypatch):
     monkeypatch.setenv("TW_DATA_DIR", str(tmp_path))
     monkeypatch.setenv("TW_COOKIE_SECURE", "false")
     monkeypatch.setenv("TW_INGEST_MAX_AGE_DAYS", "100000")
+    monkeypatch.setenv("TW_QUIET_HOURS", "")  # deterministic regardless of the time tests run
     monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
     from app import config
     from app.ingest import fetcher

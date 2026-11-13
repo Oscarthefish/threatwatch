@@ -34,7 +34,7 @@ export default function Login({ onLogin }: { onLogin: () => void }) {
           <p className="eyebrow">Personal security intelligence</p>
           <h1>Today’s threats, ranked by evidence.</h1>
           <ul className="auth-facts">
-            <li>Collects from security press, vendor research, CISA KEV, FIRST EPSS and NCSC NZ every 30 minutes.</li>
+            <li>Collects from security press, vendor research, CISA KEV, FIRST EPSS and NCSC NZ every two hours.</li>
             <li>Every severity rating states its reasons. Every claim links to its source.</li>
             <li>Follow an incident, CVE or actor and new reporting is added to its record as it appears.</li>
           </ul>

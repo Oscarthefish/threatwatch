@@ -301,7 +301,7 @@ export function NoResults({ filtered, onClear, what = 'reports' }: { filtered: b
       <p>Widen the time range or remove a filter.</p>
       {onClear && <button type="button" className="btn" onClick={onClear}>Clear filters</button>}
     </Empty>
-  ) : <Empty title={`No ${what} yet`}><p>New items appear here after the next collection run (every 30 minutes).</p></Empty>
+  ) : <Empty title={`No ${what} yet`}><p>New items appear here after the next collection run (every two hours).</p></Empty>
 }
 
 export function LoadMore({ show, busy, onClick }: { show: boolean; busy: boolean; onClick: () => void }) {

@@ -9,6 +9,8 @@ from __future__ import annotations
 import json
 import logging
 import sqlite3
+from datetime import datetime, time
+from zoneinfo import ZoneInfo
 
 from ..config import get_settings
 from ..db import now_iso
@@ -25,11 +27,46 @@ def notify(conn: sqlite3.Connection, *, kind: str, title: str, body: str = "", l
     )
     created = bool(cur.rowcount)
     if created and not digest:
-        try:
-            send_push(conn, title, body, link)
-        except Exception as e:  # push is best effort
-            log.warning("web push failed: %s", type(e).__name__)
+        if in_quiet_hours():
+            conn.execute("UPDATE notifications SET push_held=1 WHERE dedupe_key=?", (dedupe_key,))
+        else:
+            try:
+                send_push(conn, title, body, link)
+            except Exception as e:  # push is best effort
+                log.warning("web push failed: %s", type(e).__name__)
     return created
+
+
+def in_quiet_hours(now: datetime | None = None) -> bool:
+    """True inside the configured quiet window (local time; the window may cross midnight)."""
+    s = get_settings()
+    spec = (s.quiet_hours or "").strip()
+    if not spec:
+        return False
+    try:
+        a, b = (time.fromisoformat(x.strip()) for x in spec.split("-", 1))
+    except ValueError:
+        log.warning("ignoring malformed TW_QUIET_HOURS %r", spec)
+        return False
+    t = (now or datetime.now(ZoneInfo(s.timezone))).astimezone(ZoneInfo(s.timezone)).time()
+    return a <= t < b if a < b else (t >= a or t < b)
+
+
+def release_held(conn: sqlite3.Connection, now: datetime | None = None) -> int:
+    """After quiet hours, send one push summarising the alerts that were held. Returns how many were held."""
+    if in_quiet_hours(now):
+        return 0
+    rows = conn.execute("SELECT id, title FROM notifications WHERE push_held=1 ORDER BY created_at").fetchall()
+    if not rows:
+        return 0
+    conn.execute(f"UPDATE notifications SET push_held=0 WHERE id IN ({','.join(str(r['id']) for r in rows)})")
+    n = len(rows)
+    body = "; ".join(r["title"] for r in rows[:3]) + (f"; and {n - 3} more" if n > 3 else "")
+    try:
+        send_push(conn, f"{n} alert{'s' if n != 1 else ''} while notifications were quiet", body, "/notifications")
+    except Exception as e:
+        log.warning("web push failed: %s", type(e).__name__)
+    return n
 
 
 def compile_digest(conn: sqlite3.Connection, day_label: str) -> bool:

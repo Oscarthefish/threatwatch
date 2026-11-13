@@ -1,7 +1,7 @@
 # Threat Watch
 
 A private, single-user cybersecurity intelligence platform. It collects real reporting from trusted
-security sources every 30 minutes, rates each story with stated reasons, writes a daily briefing,
+security sources every two hours, rates each story with stated reasons, writes a daily briefing,
 and lets you **follow** evolving threats: new reporting is matched to a persistent, versioned,
 source-cited record, and you are told what actually changed.
 

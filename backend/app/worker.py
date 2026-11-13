@@ -92,6 +92,10 @@ def poll_requests() -> None:
         if breq:
             set_setting(conn, "briefing_requested", None)
         set_setting(conn, "worker_heartbeat", now_iso())
+        from .intel.notify import release_held
+        held = release_held(conn)  # one summary push once quiet hours end (no-op otherwise)
+        if held:
+            log.info("quiet hours over: summarised %d held alert(s) in one push", held)
     finally:
         conn.close()
     if req:

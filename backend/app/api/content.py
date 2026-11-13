@@ -410,7 +410,7 @@ def app_status(conn: sqlite3.Connection = Depends(get_db)):
         "briefing_time": f"{s.briefing_hour:02d}:{s.briefing_minute:02d} {s.timezone}",
         "recent_jobs": jobs,
         "push_configured": bool(s.vapid_public_key and s.vapid_private_key),
-        "retention_days": s.retention_days,
+        "quiet_hours": s.quiet_hours, "retention_days": s.retention_days,
         "timezone": s.timezone,
         "sources": {
             "total": conn.execute("SELECT COUNT(*) FROM sources WHERE enabled=1").fetchone()[0],

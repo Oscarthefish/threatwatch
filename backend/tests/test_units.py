@@ -141,3 +141,27 @@ def test_soc_actions_from_evidence():
 def test_soc_actions_none_for_plain_news():
     from app.intel import actions
     assert actions.derive("Company appoints new CISO", "Leadership news.", 1, [], {}, []) == []
+
+
+def test_quiet_hours_window_and_held_summary(conn, monkeypatch):
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
+    from app import config
+    from app.intel import notify
+
+    monkeypatch.setenv("TW_QUIET_HOURS", "21:30-06:30")
+    config.get_settings.cache_clear()
+    nz = ZoneInfo("Pacific/Auckland")
+    assert notify.in_quiet_hours(datetime(2099, 1, 1, 23, 0, tzinfo=nz))
+    assert notify.in_quiet_hours(datetime(2099, 1, 2, 6, 29, tzinfo=nz))
+    assert not notify.in_quiet_hours(datetime(2099, 1, 2, 6, 30, tzinfo=nz))
+    assert not notify.in_quiet_hours(datetime(2099, 1, 2, 12, 0, tzinfo=nz))
+    for i in range(4):
+        conn.execute("INSERT INTO notifications(created_at, kind, title, body, dedupe_key, push_held) VALUES(?,?,?,?,?,1)",
+                     ("2099-01-01T10:00:00Z", "watch_important", f"Example alert {i}", "", f"k{i}"))
+    assert notify.release_held(conn, datetime(2099, 1, 2, 3, 0, tzinfo=nz)) == 0       # still quiet: nothing sent
+    assert notify.release_held(conn, datetime(2099, 1, 2, 7, 0, tzinfo=nz)) == 4       # after: one summary for all four
+    assert conn.execute("SELECT COUNT(*) FROM notifications WHERE push_held=1").fetchone()[0] == 0
+    monkeypatch.setenv("TW_QUIET_HOURS", "")
+    config.get_settings.cache_clear()
+    assert not notify.in_quiet_hours(datetime(2099, 1, 1, 23, 0, tzinfo=nz))

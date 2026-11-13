@@ -444,3 +444,20 @@ def test_group_profile_resolves_aliases_and_skips_roundups(client, conn):
     assert sum(w["high"] for w in g["weekly"]) == 1
     assert client.get("/api/groups/actor/Not%20A%20Real%20Group").status_code == 404
     assert client.get("/api/groups/vendor/Example").status_code == 404
+
+
+def test_ai_tiers_pick_models_prices_and_fallback(conn, fake_ai, fixture_sources):
+    msgs = fake_ai({"summary": "S", "why_it_matters": "W", "technical": "", "exploitation_status": "none_reported", "entities": []})
+    seen = []
+    orig = msgs.create
+    msgs.create = lambda **kw: (seen.append(kw), orig(**kw))[1]
+    src = conn.execute("SELECT id FROM sources LIMIT 1").fetchone()[0]
+    aid = conn.execute("INSERT INTO articles(source_id,url,canonical_url,title,summary_text,retrieved_at,published_at) VALUES(?,?,?,?,?,?,?)",
+                       (src, "https://x.example/t", "https://x.example/t", "Example story", "Example text.", "2099-01-01T00:00:00Z", "2099-01-01T00:00:00Z")).lastrowid
+    ai.summarise_article(conn, dict(conn.execute("SELECT a.*, 'FX' AS source_name FROM articles a WHERE id=?", (aid,)).fetchone()))
+    assert seen[-1]["model"] == "claude-haiku-5-5" and "betas" not in seen[-1]   # fast tier; Haiku has no server-side fallback
+    spent = conn.execute("SELECT cost_usd FROM ai_usage").fetchone()[0]
+    assert abs(spent - (1000 / 1e6 * 0.10 + 200 / 1e6 * 0.50)) < 1e-9                # priced as Haiku, not Opus
+    ai.structured(conn, kind="briefing", system="sys", user="<untrusted_source>x</untrusted_source>", schema={"type": "object"})
+    assert seen[-1]["model"] == "claude-sonnet-5-5" and seen[-1].get("betas")         # deep tier keeps the fallback
+    assert ai.budget_status(conn)["budget_usd"] == 0.50

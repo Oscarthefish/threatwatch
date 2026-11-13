@@ -69,6 +69,28 @@ def untrusted(article: dict, max_chars: int = 6000) -> str:
     )
 
 
+# USD per million tokens (input, output), from the Claude API model reference (Nov 2026).
+PRICES: dict[str, tuple[float, float]] = {
+    "claude-haiku-5-5": (0.10, 0.50),     # prompts up to 100K tokens; (0.50, 2.50) above
+    "claude-sonnet-5-5": (2.00, 10.00),
+    "claude-opus-5-5": (4.00, 20.00),
+}
+NO_SERVER_FALLBACK = ("claude-haiku-",)  # models the server-side fallback beta does not support
+
+
+def model_for(tier: str) -> str:
+    s = get_settings()
+    return s.ai_model_fast if tier == "fast" else s.ai_model
+
+
+def cost_usd(model: str, tokens_in: int, tokens_out: int) -> float:
+    s = get_settings()
+    pin, pout = PRICES.get(model, (s.ai_input_usd_per_mtok, s.ai_output_usd_per_mtok))
+    if model.startswith("claude-haiku-5-5") and tokens_in > 100_000:
+        pin, pout = 0.50, 2.50
+    return tokens_in / 1e6 * pin + tokens_out / 1e6 * pout
+
+
 def budget_status(conn: sqlite3.Connection) -> dict:
     s = get_settings()
     day = utcnow().strftime("%Y-%m-%d")
@@ -77,6 +99,7 @@ def budget_status(conn: sqlite3.Connection) -> dict:
     return {
         "enabled": s.ai_enabled,
         "model": s.ai_model,
+        "model_fast": s.ai_model_fast,
         "day": day,
         "spent_usd": round(spent, 4),
         "budget_usd": s.ai_daily_budget_usd,
@@ -114,6 +137,7 @@ def structured(
     subject_id: int | None = None,
     max_tokens: int = 4000,
     use_cache: bool = True,
+    tier: str = "deep",
 ) -> dict:
     """Run one schema-constrained request. Raises AIUnavailable when disabled, over budget or failing."""
     global _run_requests
@@ -121,7 +145,8 @@ def structured(
     if not s.ai_enabled:
         raise AIUnavailable("AI provider not configured")
     full_system = system + "\n\n" + INJECTION_GUARD
-    h = hashlib.sha256(jdumps([s.ai_model, kind, full_system, user, schema]).encode()).hexdigest()
+    model = model_for(tier)
+    h = hashlib.sha256(jdumps([model, kind, full_system, user, schema]).encode()).hexdigest()
     if use_cache:
         hit = cached(conn, kind, h)
         if hit is not None:
@@ -136,7 +161,7 @@ def structured(
     import anthropic
 
     params: dict[str, Any] = dict(
-        model=s.ai_model,
+        model=model,
         max_tokens=max_tokens,
         system=full_system,
         messages=[{"role": "user", "content": user}],
@@ -144,7 +169,7 @@ def structured(
     )
     try:
         client = _client()
-        if s.ai_server_fallback:
+        if s.ai_server_fallback and not model.startswith(NO_SERVER_FALLBACK):
             resp = client.beta.messages.create(betas=["server-side-fallback-2026-07-01"], fallbacks="default", **params)
         else:
             resp = client.messages.create(**params)
@@ -167,7 +192,7 @@ def structured(
     usage = getattr(resp, "usage", None)
     tin = (getattr(usage, "input_tokens", 0) or 0) + (getattr(usage, "cache_creation_input_tokens", 0) or 0) + (getattr(usage, "cache_read_input_tokens", 0) or 0)
     tout = getattr(usage, "output_tokens", 0) or 0
-    cost = tin / 1e6 * s.ai_input_usd_per_mtok + tout / 1e6 * s.ai_output_usd_per_mtok
+    cost = cost_usd(model, tin, tout)
 
     if resp.stop_reason == "refusal":
         _record_usage(conn, tin, tout, cost, failed=True)
@@ -186,7 +211,7 @@ def structured(
     conn.execute(
         """INSERT INTO ai_outputs(kind, subject_type, subject_id, input_hash, model, output_json, input_tokens, output_tokens, cost_usd, created_at)
            VALUES(?,?,?,?,?,?,?,?,?,?) ON CONFLICT(kind, input_hash) DO UPDATE SET output_json=excluded.output_json, created_at=excluded.created_at""",
-        (kind, subject_type, subject_id, h, getattr(resp, "model", s.ai_model), jdumps(out), tin, tout, cost, now_iso()),
+        (kind, subject_type, subject_id, h, getattr(resp, "model", model), jdumps(out), tin, tout, cost, now_iso()),
     )
     return out
 
@@ -234,7 +259,7 @@ def summarise_article(conn: sqlite3.Connection, article: dict) -> dict:
         "List entities that are explicitly named in the source."
     )
     user = "Summarise this item.\n\n" + untrusted(article)
-    return structured(conn, kind="article_summary", system=system, user=user, schema=ARTICLE_SCHEMA,
+    return structured(conn, kind="article_summary", system=system, user=user, schema=ARTICLE_SCHEMA, tier="fast",
                       subject_type="article", subject_id=article["id"], max_tokens=3000)
 
 

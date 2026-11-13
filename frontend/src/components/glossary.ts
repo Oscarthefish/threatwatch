@@ -36,7 +36,7 @@ export const TERMS: Term[] = [
     see: ['cvss', 'kev'], link: { label: 'first.org/epss', url: 'https://www.first.org/epss/' } },
   { id: 'kev', term: 'KEV', full: 'Known Exploited Vulnerabilities catalogue', group: 'vuln',
     body: 'A list run by CISA (the US Cybersecurity and Infrastructure Security Agency) of CVEs with reliable evidence of exploitation in real attacks, each with a required action and, for US federal agencies, a fix-by date. Entries also say whether the flaw is known to be used by ransomware. KEV is the strongest single signal of what to patch first.',
-    inApp: 'Checked hourly and complete. A KEV listing adds two severity points and an urgent "Patch now" step quoting CISA\'s action and deadline. See Breaking, Vulnerabilities (Exploited filter) and Trends.',
+    inApp: 'Checked every two hours and complete. A KEV listing adds two severity points and an urgent "Patch now" step quoting CISA\'s action and deadline. See Breaking, Vulnerabilities (Exploited filter) and Trends.',
     see: ['cvss', 'epss', 'zero-day'], link: { label: 'CISA KEV catalogue', url: 'https://www.cisa.gov/known-exploited-vulnerabilities-catalog' } },
   { id: 'cwe', term: 'CWE', full: 'Common Weakness Enumeration', group: 'vuln',
     body: 'A catalogue of the kinds of mistakes that cause vulnerabilities, such as CWE-79 (cross-site scripting) or CWE-787 (out-of-bounds write). A CVE is one specific flaw; a CWE is the category it belongs to.',
