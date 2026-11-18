@@ -461,3 +461,70 @@ def test_ai_tiers_pick_models_prices_and_fallback(conn, fake_ai, fixture_sources
     ai.structured(conn, kind="briefing", system="sys", user="<untrusted_source>x</untrusted_source>", schema={"type": "object"})
     assert seen[-1]["model"] == "claude-sonnet-5-5" and seen[-1].get("betas")         # deep tier keeps the fallback
     assert ai.budget_status(conn)["budget_usd"] == 0.50
+
+
+def _login_as(client, remember: bool, ua: str):
+    r = client.post("/api/auth/login", headers={"user-agent": ua},
+                    json={"username": "analyst", "password": "correct horse battery staple", "remember": remember})
+    assert r.status_code == 200 and r.json()["trusted"] is remember
+    return r
+
+
+PHONE = "Mozilla/5.0 (Linux; Android 16; Pixel 7 Pro) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0 Mobile Safari/537.36"
+MAC = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0 Safari/537.36"
+
+
+def test_trusted_device_session_renews_and_normal_session_does_not(client, conn):
+    from datetime import timedelta
+
+    from app.db import iso, utcnow
+    r = _login_as(client, True, PHONE)
+    assert "max-age=15552000" in r.headers["set-cookie"].lower()  # 180 days
+    row = conn.execute("SELECT rowid, trusted, expires_at FROM sessions").fetchone()
+    assert row["trusted"] == 1
+    # two months later the device opens the app: expiry moves forward and the cookie is re-issued
+    conn.execute("UPDATE sessions SET expires_at=? WHERE rowid=?", (iso(utcnow() + timedelta(days=120)), row["rowid"]))
+    me = client.get("/api/auth/me")
+    assert me.status_code == 200 and me.json()["trusted"] is True
+    assert "max-age=15552000" in me.headers.get("set-cookie", "").lower()
+    renewed = conn.execute("SELECT expires_at FROM sessions WHERE rowid=?", (row["rowid"],)).fetchone()[0]
+    assert renewed > iso(utcnow() + timedelta(days=179))
+    # used again the same day: no rewrite
+    assert "set-cookie" not in client.get("/api/auth/me").headers
+
+    client.cookies.clear()
+    r = _login_as(client, False, MAC)
+    assert "max-age=2592000" in r.headers["set-cookie"].lower()  # 30 days, fixed
+    conn.execute("UPDATE sessions SET expires_at=? WHERE trusted=0", (iso(utcnow() + timedelta(days=5)),))
+    assert "set-cookie" not in client.get("/api/auth/me").headers
+    assert conn.execute("SELECT expires_at FROM sessions WHERE trusted=0").fetchone()[0] < iso(utcnow() + timedelta(days=6))
+    # an expired trusted session is not revived
+    conn.execute("UPDATE sessions SET expires_at=? WHERE trusted=0", (iso(utcnow() - timedelta(minutes=1)),))
+    assert client.get("/api/auth/me").status_code == 401
+
+
+def test_signed_in_devices_listed_and_one_can_be_signed_out(client, conn):
+    from fastapi.testclient import TestClient
+    phone = TestClient(client.app)
+    _login_as(phone, True, PHONE)
+    _login_as(client, False, MAC)
+    data = client.get("/api/auth/sessions").json()
+    devs = {d["device"]: d for d in data["sessions"]}
+    assert set(devs) == {"Chrome on Android", "Chrome on Mac"}
+    assert devs["Chrome on Mac"]["current"] and not devs["Chrome on Android"]["current"]
+    assert devs["Chrome on Android"]["trusted"] and data["trusted_days"] == 180
+    assert "token_hash" not in devs["Chrome on Mac"] and "user_agent" not in devs["Chrome on Mac"]
+    pid = devs["Chrome on Android"]["id"]
+    assert client.delete(f"/api/auth/sessions/{pid}").status_code == 403  # CSRF header required
+    assert client.delete(f"/api/auth/sessions/{pid}", headers=H).status_code == 200
+    assert phone.get("/api/auth/me").status_code == 401  # the lost phone is signed out
+    assert client.get("/api/auth/me").status_code == 200
+    assert client.delete(f"/api/auth/sessions/{pid}", headers=H).status_code == 404
+
+
+def test_device_labels():
+    from app.auth import device_label
+    assert device_label(PHONE) == "Chrome on Android"
+    assert device_label("Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 Version/18.0 Mobile/15E148 Safari/604.1") == "Safari on iPhone"
+    assert device_label("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/141.0 Safari/537.36 Edg/141.0") == "Edge on Windows"
+    assert device_label("") == "Unknown device"

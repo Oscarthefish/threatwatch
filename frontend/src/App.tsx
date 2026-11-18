@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Route, Routes } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
 import { api, ApiError, setUnauthorizedHandler } from './api'
@@ -6,6 +6,7 @@ import { Layout, useTheme } from './components/Layout'
 import { Loading, usePageTitle } from './components/ui'
 import { Link } from 'react-router-dom'
 import Login from './pages/Login'
+import { Unreachable } from './components/Unreachable'
 import Today from './pages/Today'
 import Breaking from './pages/Breaking'
 import Section from './pages/Section'
@@ -22,22 +23,30 @@ import Trends from './pages/Trends'
 import GroupPage from './pages/Group'
 import Glossary from './pages/Glossary'
 
-type AuthState = 'checking' | 'in' | 'out'
+type AuthState = 'checking' | 'in' | 'out' | 'unreachable'
 
 export default function App() {
   useTheme()
   const [auth, setAuth] = useState<AuthState>('checking')
   const qc = useQueryClient()
 
+  const check = useCallback(() => {
+    api.get('/api/auth/me').then(() => setAuth('in')).catch((e) => {
+      // Only the server saying "not signed in" shows the sign-in form. A failed connection (Tailscale off, server
+      // restarting) keeps the session: offline, the service-worker cache serves content; online, we say so and retry.
+      if (e instanceof ApiError && e.status === 401) setAuth('out')
+      else if (!(e instanceof ApiError) && !navigator.onLine) setAuth('in')
+      else setAuth('unreachable')
+    })
+  }, [])
+
   useEffect(() => {
     setUnauthorizedHandler(() => { setAuth('out'); qc.clear() })
-    api.get('/api/auth/me').then(() => setAuth('in')).catch((e) => {
-      // Offline with a cached session: let the service-worker cache serve content.
-      if (!(e instanceof ApiError) && !navigator.onLine) setAuth('in'); else setAuth('out')
-    })
-  }, [qc])
+    check()
+  }, [qc, check])
 
   if (auth === 'checking') return <div className="login"><div style={{ width: 280 }}><Loading lines={3} /></div></div>
+  if (auth === 'unreachable') return <Unreachable onRetry={check} />
   if (auth === 'out') return <Login onLogin={() => { qc.clear(); setAuth('in') }} />
 
   return (

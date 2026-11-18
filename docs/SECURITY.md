@@ -6,7 +6,7 @@
 |---|---|
 | Unauthenticated access to intelligence, notes, follows | Private network (Tailscale) **and** app authentication on every `/api/*` route except `/api/health` and `/api/auth/login` (tested). Static assets contain no data. |
 | Credential guessing | Argon2id hashes; login limited to 8 failures/15 min per client and 32 globally; generic error; constant-work dummy verify for unknown users. |
-| Session theft / CSRF | 256-bit random token in `HttpOnly; Secure; SameSite=Strict` cookie; only SHA-256 stored server-side; 30-day expiry; password change revokes sessions; unsafe methods require `X-TW-Request: 1` header. |
+| Session theft / CSRF | 256-bit random token in `HttpOnly; Secure; SameSite=Strict` cookie; only SHA-256 stored server-side; 30-day fixed expiry, or 180 days renewed on use when "Keep me signed in on this device" is ticked; every session can be signed out from Settings (deleted server-side); password change revokes all sessions; unsafe methods require `X-TW-Request: 1` header. |
 | XSS from hostile feed content | Feed HTML stripped to text with nh3; React renders text nodes only (no `innerHTML` anywhere); strict CSP `default-src 'self'; script-src 'self'; object-src 'none'; frame-ancestors 'none'`. |
 | Prompt injection via articles | Untrusted-source wrapper with neutralised closing tag; system prompt treats content as data; no tools available to the model; JSON-schema output; citation validation; ungrounded entities dropped; IOCs never AI-generated; AI output labelled as such and kept separate from evidence. A test fixture contains an injection attempt. |
 | SSRF / unsafe fetching | Only http(s) on ports 80/443; DNS resolved and all addresses must be public (blocks loopback, RFC1918, link-local/metadata `169.254.169.254`, CGNAT, multicast, reserved, IPv4-mapped IPv6); redirects followed manually with per-hop validation (max 5); 15 MB body cap with streaming; 20 s timeout; per-host politeness. Residual: DNS rebinding between check and connect (sources are owner-controlled). |
@@ -60,4 +60,4 @@ website (`thefish.nz`) would not be touched beyond adding that one record.
 
 - Rotate the app password: `docker compose exec web python -m app.cli set-password analyst` (revokes all sessions).
 - Rotate the AI key: edit the env file, `docker compose up -d`.
-- Revoke a lost phone: change the password (sessions revoked) and remove the device from the tailnet.
+- Revoke a lost phone: sign it out under Settings → Signed-in devices and remove it from the tailnet (Tailscale admin console). If the password may be known, also change it, which signs out every device.

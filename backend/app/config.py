@@ -22,7 +22,8 @@ class Settings(BaseSettings):
     # Web
     static_dir: Path | None = None  # built frontend assets; served by the API when set
     cookie_secure: bool = True  # set False only for local http development
-    session_days: int = 30
+    session_days: int = 30  # fixed lifetime of a normal sign-in
+    trusted_session_days: int = 180  # "Keep me signed in on this device": renewed each day the device is used
     trusted_hosts: str = "*"  # comma separated, e.g. "watch.thefish.nz,threatwatch.tailnet.ts.net"
     login_max_attempts: int = 8  # per 15 minutes, per client
     timezone: str = "Pacific/Auckland"

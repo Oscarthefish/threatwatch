@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from '../api'
 import type { Source } from '../types'
-import { ErrorBox, Loading, PageHeader, TimeAgo, useToast } from '../components/ui'
+import { ErrorBox, fmtDate, Loading, PageHeader, TimeAgo, timeAgo, useToast } from '../components/ui'
 import { useTheme } from '../components/Layout'
 import { useStartTour } from '../components/Tour'
 
@@ -23,6 +23,44 @@ function b64ToUint8(b64: string) {
   const pad = '='.repeat((4 - (b64.length % 4)) % 4)
   const raw = atob((b64 + pad).replace(/-/g, '+').replace(/_/g, '/'))
   return Uint8Array.from([...raw].map((c) => c.charCodeAt(0)))
+}
+
+type Device = { id: number; device: string; signed_in_at: string; last_seen: string; expires_at: string; trusted: boolean; current: boolean }
+
+function Devices() {
+  const qc = useQueryClient()
+  const toast = useToast()
+  const q = useQuery({ queryKey: ['sessions'], queryFn: () => api.get<{ sessions: Device[]; trusted_days: number; session_days: number }>('/api/auth/sessions') })
+  const end = useMutation({
+    mutationFn: (d: Device) => api.del(`/api/auth/sessions/${d.id}`),
+    onSuccess: (_r, d) => { toast(`${d.device} signed out`); qc.invalidateQueries({ queryKey: ['sessions'] }) },
+    onError: () => toast('Could not sign that device out. Try again.', 'error'),
+  })
+  if (q.isError) return <ErrorBox error={q.error} onRetry={() => q.refetch()} />
+  if (!q.data) return <Loading lines={3} />
+  return (
+    <>
+      <ul className="slist">
+        {q.data.sessions.map((d) => (
+          <li key={d.id} className="srow">
+            <div className="grow">
+              <div className="row nowrap between top">
+                <span className="strong">{d.device}{d.current && <span className="muted"> (this device)</span>}</span>
+                {!d.current && (
+                  <button type="button" className="btn small" aria-busy={(end.isPending && end.variables?.id === d.id) || undefined}
+                    onClick={() => end.mutate(d)} aria-label={`Sign out ${d.device}, last used ${timeAgo(d.last_seen)}`}>Sign out</button>
+                )}
+              </div>
+              <div className="xsmall muted">
+                {d.trusted ? 'Kept signed in' : `Signed in until ${fmtDate(d.expires_at)}`} · last used <TimeAgo iso={d.last_seen} /> · signed in <TimeAgo iso={d.signed_in_at} />
+              </div>
+            </div>
+          </li>
+        ))}
+      </ul>
+      <p className="xsmall muted mb-0">A device you keep signed in stays signed in while it opens Threat Watch at least once every {Math.round(q.data.trusted_days / 30)} months. Other sign-ins last {q.data.session_days} days. Signing a device out takes effect the next time it opens the app.</p>
+    </>
+  )
 }
 
 function SourceRow({ x, onToggle }: { x: Source; onToggle: () => void }) {
@@ -139,8 +177,13 @@ export default function Settings({ onLogout }: { onLogout: () => void }) {
             <div className="body">
               <dl className="kv mb-3"><dt>Signed in as</dt><dd className="strong">{me.data?.username ?? '…'}</dd></dl>
               <button type="button" className="btn" onClick={logout}>Sign out</button>
-              <p className="xsmall muted mt-3 mb-0">Signing out also clears pages saved on this device for offline reading. To change the password, run <code>deploy/local.sh password</code> on the host; it signs out every session.</p>
+              <p className="xsmall muted mt-3 mb-0">Signing out also clears pages saved on this device for offline reading. To change the password, run the <code>set-password</code> command on the server (see the deployment guide); it signs out every device, including ones kept signed in.</p>
             </div>
+          </section>
+
+          <section className="panel" aria-labelledby="dev-h">
+            <header><h2 id="dev-h">Signed-in devices</h2></header>
+            <div className="body"><Devices /></div>
           </section>
 
           <section className="panel" aria-labelledby="tour-sh">

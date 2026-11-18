@@ -27,6 +27,7 @@ CSP = ("default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline';
 class LoginIn(BaseModel):
     username: str = Field(..., max_length=100)
     password: str = Field(..., max_length=500)
+    remember: bool = False
 
 
 def create_app() -> FastAPI:
@@ -80,7 +81,7 @@ def create_app() -> FastAPI:
 
     @app.post("/api/auth/login")
     def login(body: LoginIn, request: Request, response: Response, conn: sqlite3.Connection = Depends(auth.get_db)):
-        return auth.login(conn, request, response, body.username, body.password)
+        return auth.login(conn, request, response, body.username, body.password, body.remember)
 
     @app.post("/api/auth/logout")
     def logout(request: Request, response: Response, conn: sqlite3.Connection = Depends(auth.get_db)):
@@ -88,9 +89,23 @@ def create_app() -> FastAPI:
         return {"ok": True}
 
     @app.get("/api/auth/me")
-    def me(u: dict = Depends(auth.require_user), conn: sqlite3.Connection = Depends(auth.get_db)):
+    def me(request: Request, response: Response, u: dict = Depends(auth.require_user),
+           conn: sqlite3.Connection = Depends(auth.get_db)):
+        auth.renew_trusted(conn, request, response, u)
         unread = conn.execute("SELECT COUNT(*) FROM notifications WHERE digest_pending=0 AND read_at IS NULL").fetchone()[0]
-        return {"username": u["username"], "unread_notifications": unread, "ai_enabled": s.ai_enabled}
+        return {"username": u["username"], "unread_notifications": unread, "ai_enabled": s.ai_enabled,
+                "trusted": u["trusted"]}
+
+    @app.get("/api/auth/sessions")
+    def sessions(u: dict = Depends(auth.require_user), conn: sqlite3.Connection = Depends(auth.get_db)):
+        return {"sessions": auth.list_sessions(conn, u), "trusted_days": s.trusted_session_days, "session_days": s.session_days}
+
+    @app.delete("/api/auth/sessions/{session_id}")
+    def end_session(session_id: int, request: Request, response: Response, u: dict = Depends(auth.require_user),
+                    conn: sqlite3.Connection = Depends(auth.get_db)):
+        if not auth.revoke_session(conn, u, session_id):
+            raise HTTPException(404, "not found")
+        return {"ok": True}
 
     app.include_router(content.router)
     app.include_router(user.router)

@@ -2,7 +2,7 @@
 
 Legend: ✅ implemented and verified · 🟡 implemented, not yet verified in its real environment · ⛔ not done
 
-_Last updated 2026-11-17._
+_Last updated 2026-11-18._
 
 ## Phase 1 — Foundation
 - ✅ Git repository, structure, pinned dependencies
@@ -49,6 +49,7 @@ _Last updated 2026-11-17._
 - ✅ Breaking reorganised; follow alerts count only facts stated alongside the subject; search passages highlighted; date checks
 - ✅ Trends page and Today panel; threat group profiles with weekly charts
 - ✅ MITRE ATT&CK groups and software synced weekly; technique links; further reading from CVE records and KEV
+- ✅ "Keep me signed in on this device" (180 days, renewed on use), signed-in devices list with remote sign-out; a server that cannot be reached no longer shows the sign-in form
 - ✅ Hudson Rock (InfoStealers) research feed and Threat Feeds weekly report; the weekly report is context only (see DECISIONS.md)
 
 ## Known limitations

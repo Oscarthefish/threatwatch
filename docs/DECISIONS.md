@@ -3,6 +3,27 @@
 Consequential product and architecture decisions, newest first. Each records what was decided, why, and what it
 rules out.
 
+## 2026-11-18: Trusted devices instead of re-entering the password
+
+**Problem.** The phone app kept showing the sign-in form although its 30-day session was valid. The cause was the
+start-up check: any failure to reach the server (Tailscale off, server restarting) was treated as "signed out".
+
+**Decision.**
+- Only a 401 from the server shows the sign-in form. A connection failure or proxy error shows "Cannot reach Threat
+  Watch", keeps the session, and retries every 20 seconds and whenever the app comes back to the foreground.
+- "Keep me signed in on this device" (off by default) creates a *trusted* session lasting 180 days from last use: the
+  server-side expiry and the cookie are renewed at most once a day by `/api/auth/me`. Other sign-ins keep a fixed
+  30 days.
+- Settings lists signed-in devices (browser and system from the user agent, last use, trusted or not) and can sign
+  any other device out, which deletes its session server-side.
+
+**Why it is acceptable.** The app is reachable only from devices on the owner's tailnet, so a trusted session still
+requires an authorised Tailscale device plus the HttpOnly, SameSite=Strict cookie. A lost device can be signed out
+from Settings and removed from the tailnet; a password change still revokes every session.
+
+**Ruled out.** Passkeys/WebAuthn (more moving parts for one user), long-lived tokens in localStorage (readable by
+script), and an "always" session with no expiry.
+
 ## 2026-11-17: Hudson Rock as a research source; weekly statistics as context only
 
 **Decision.** Add two RSS sources from Hudson Rock's infostealers.com:

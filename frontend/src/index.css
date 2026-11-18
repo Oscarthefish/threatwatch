@@ -413,6 +413,7 @@ button.sev span { text-decoration: underline dotted; text-underline-offset: 3px;
 .health.bad i { background: var(--warn); }
 .login { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: var(--s-4); }
 .login .card { width: 100%; max-width: 380px; padding: var(--s-5); }
+.login h1 { font-size: var(--t-xl); margin: 0 0 var(--s-3); }
 
 /* ========================= reduced motion ========================= */
 @media (prefers-reduced-motion: reduce) {

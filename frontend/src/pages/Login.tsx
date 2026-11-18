@@ -16,12 +16,13 @@ export default function Login({ onLogin }: { onLogin: () => void }) {
   const [username, setU] = useState('')
   const [password, setP] = useState('')
   const [show, setShow] = useState(false)
+  const [remember, setRemember] = useState(false)
   const [err, setErr] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
 
   async function submit(e: React.FormEvent) {
     e.preventDefault(); setBusy(true); setErr(null)
-    try { await api.post('/api/auth/login', { username: username.trim(), password }); onLogin() }
+    try { await api.post('/api/auth/login', { username: username.trim(), password, remember }); onLogin() }
     catch (ex) { setErr(message(ex)); setP('') }
     finally { setBusy(false) }
   }
@@ -55,9 +56,16 @@ export default function Login({ onLogin }: { onLogin: () => void }) {
               <button type="button" className="btn quiet small" aria-pressed={show} onClick={() => setShow(!show)}>{show ? 'Hide' : 'Show'}</button>
             </span>
           </Field>
+          <div className="mb-3">
+            <label className="check">
+              <input type="checkbox" name="remember" checked={remember} onChange={(e) => setRemember(e.target.checked)} aria-describedby="remember-hint" />
+              Keep me signed in on this device
+            </label>
+            <p id="remember-hint" className="xsmall muted mb-0">Stays signed in as long as you open Threat Watch at least once every six months. Only tick this on your own devices; you can sign a device out from Settings.</p>
+          </div>
           {err && <div className="alert mb-3" role="alert"><p className="mb-0">{err}</p></div>}
           <button className="btn primary block" aria-busy={busy || undefined} disabled={!username || !password}>Sign in</button>
-          <p className="xsmall muted mt-3 mb-0">Forgotten the password? Reset it on the host with <code>deploy/local.sh password</code>.</p>
+          <p className="xsmall muted mt-3 mb-0">Forgotten the password? Reset it on the server with the <code>set-password</code> command (see the deployment guide).</p>
         </form>
       </section>
     </main>
