@@ -8,7 +8,7 @@ import { Sheet } from './Sheet'
  * on the selected item; on pages without items (an article) they act on the page.
  */
 const GO: Record<string, [string, string]> = {
-  t: ['/', 'Today'], b: ['/breaking', 'Breaking'], i: ['/intel', 'Threat intelligence'], v: ['/vulns', 'Vulnerabilities'], r: ['/trends', 'Trends'],
+  t: ['/', 'Today'], b: ['/breaking', 'Breaking'], i: ['/intel', 'Threat intelligence'], v: ['/vulns', 'Vulnerabilities'], r: ['/trends', 'Trends'], w: ['/ransomware', 'Ransomware'],
   d: ['/soc', 'SOC & DFIR'], a: ['/apac', 'NZ & APAC'], f: ['/watch', 'Following'], s: ['/saved', 'Saved'],
   n: ['/notifications', 'Notifications'], l: ['/glossary', 'Glossary'], p: ['/settings', 'Settings'],
 }

@@ -47,6 +47,7 @@ The screenshots show real public reporting collected by the app; no personal dat
 - **Breaking:** significant incidents and exploitation from the last 72 hours, with a priority/newest toggle that explains its ordering.
 - **Topic feeds:** Threat intelligence, SOC & DFIR, and NZ & APAC, filterable by topic, severity and date.
 - **Vulnerabilities:** every tracked CVE with CISA KEV status, FIRST EPSS and CVSS, affected products and references.
+- **Ransomware:** which groups post the most leak-site claims, against which sectors and countries, what is rising and falling, and claims against New Zealand and Australian organisations. Claims come from ransomware.live, are labelled as unverified, and link to Threat Watch reporting when a story names the victim.
 - **Trends and threat group profiles:** charts of what the reporting says is active, rising and falling; each actor, ransomware group and malware family has a profile linked to MITRE ATT&CK.
 - **Following:** incidents, CVEs, actors, malware or topics. Reports are matched automatically, the sentence that matched is shown, broad bulletins never count as changes, and partial matches wait for your review.
 - **What to do:** next steps for a SOC on each story, split into steps backed by the evidence (source, CVE record, CISA KEV) and general playbook advice.

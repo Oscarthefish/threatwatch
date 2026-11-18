@@ -38,7 +38,12 @@ def group(kind: str, name: str, days: int = Query(90, ge=28, le=365), conn: sqli
     canon, aliases = _canonical(kind, name.strip())
     ent_ids = [r[0] for r in conn.execute("SELECT id FROM entities WHERE type=? AND lower(value)=lower(?)", (kind, canon))]
     if not ent_ids and not aliases and canon not in KINDS[kind][1]:
-        raise HTTPException(404, "not found")
+        # a ransomware group known only from leak-site claims still gets a profile
+        claimed = conn.execute("SELECT group_name FROM ransomware_claims WHERE lower(group_name)=lower(?) LIMIT 1",
+                               (canon,)).fetchone() if kind == "ransomware" else None
+        if not claimed:
+            raise HTTPException(404, "not found")
+        canon = claimed[0]
     ph = ",".join("?" * len(ent_ids)) or "NULL"
 
     today = utcnow().date()
@@ -104,7 +109,10 @@ def group(kind: str, name: str, days: int = Query(90, ge=28, le=365), conn: sqli
     for r in related.get("attack_technique", []):
         from ..intel.reading import technique_url
         r["url"] = technique_url(r["value"])
+    from .ransomware import group_claims
+    claims = group_claims(conn, canon, aliases, cur_start, prev_start, weeks) if kind == "ransomware" else None
     return {
+        "claims": claims,
         "attack": attack, "attack_synced_at": attack_synced,
         "kind": kind, "name": canon, "aliases": aliases, "known": bool(ent_ids), "days": days,
         "period_start": cur_start.isoformat(), "coverage_start": coverage.isoformat(), "current_partial": cur_start < coverage,

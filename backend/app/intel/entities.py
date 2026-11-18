@@ -68,7 +68,8 @@ RANSOMWARE: dict[str, list[str]] = {
     "Black Basta": [],
     "Qilin": ["Agenda"],
     "RansomHub": [],
-    "Medusa": ["MedusaLocker"],
+    "Medusa": [],
+    "MedusaLocker": [],  # a separate, older family; not an alias of Medusa
     "Rhysida": [],
     "BianLian": [],
     "8Base": [],

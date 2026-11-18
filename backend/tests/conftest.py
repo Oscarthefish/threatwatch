@@ -26,7 +26,7 @@ def env(tmp_path, monkeypatch):
 
     def fake_getaddrinfo(host, port, *a, **kw):
         if host.endswith((".example", ".example.com", ".example.org")) or host in (
-            "www.cisa.gov", "api.first.org", "cveawg.mitre.org", "www.ncsc.govt.nz"):
+            "www.cisa.gov", "api.first.org", "cveawg.mitre.org", "www.ncsc.govt.nz", "api.ransomware.live"):
             return [(socket.AF_INET, socket.SOCK_STREAM, 6, "", ("93.184.216.34", port))]
         if host == "internal.example.net":
             return [(socket.AF_INET, socket.SOCK_STREAM, 6, "", ("10.0.0.5", port))]

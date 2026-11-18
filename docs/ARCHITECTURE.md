@@ -52,7 +52,7 @@ backend/app/
 
 ## Data model (key tables)
 
-- **Evidence:** `sources`, `articles` (+ `articles_fts`), `entities`, `article_entities` (method `rule`/`ai`), `vulnerabilities`
+- **Evidence:** `sources`, `articles` (+ `articles_fts`), `entities`, `article_entities` (method `rule`/`ai`), `vulnerabilities`, `ransomware_claims` (leak-site claims from ransomware.live, identifying fields only, 200-day retention)
 - **Generated:** `ai_outputs` (cached by input hash), `briefings`, `watch_summaries` (versioned)
 - **Threat Watch:** `watches`, `watch_evidence` (linked/candidate/rejected + score, reasons, significance, assessment), `watch_timeline`
 - **Personal:** `bookmarks` (note, tags), `reading_history`, `notifications`, `push_subscriptions`, `settings` (last visit etc.)
@@ -69,9 +69,12 @@ Every 2 hours, around the clock (`TW_INGEST_INTERVAL_MINUTES`; feeds such as The
    Severity caps per source (`max_severity`) keep release notes, podcasts and statistical reports out of Breaking;
    titles with "weekly report", "week in review" and similar are tagged `roundup` (severity −1, never a development
    for a followed item, excluded from trend counts).
-5. KEV (each run), EPSS (twice daily, batched 100 CVEs/request), CVE.org enrichment (≤60 CVEs/run, 1 req/s/host).
-6. Optional AI summaries for the top-ranked new cluster representatives.
-7. Match new articles against active watches.
+5. Ransomware leak-site claims from ransomware.live (`ingest/ransom.py`): the newest 100 claims each run; the first run also
+   backfills three calendar months, one request a minute as the free API requires. Group names are mapped to the
+   entity dictionary (`thegentlemen` → The Gentlemen, `lockbit5` → LockBit).
+6. KEV (each run), EPSS (twice daily, batched 100 CVEs/request), CVE.org enrichment (≤60 CVEs/run, 1 req/s/host).
+7. Optional AI summaries for the top-ranked new cluster representatives.
+8. Match new articles against active watches.
 
 ## SecOps next steps
 

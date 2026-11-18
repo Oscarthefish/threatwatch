@@ -20,6 +20,7 @@ import Search from './pages/Search'
 import Notifications from './pages/Notifications'
 import Settings from './pages/Settings'
 import Trends from './pages/Trends'
+import Ransomware from './pages/Ransomware'
 import GroupPage from './pages/Group'
 import Glossary from './pages/Glossary'
 
@@ -67,6 +68,7 @@ export default function App() {
           tags={[['exploited', 'Exploited'], ['incident', 'Incidents'], ['vulnerability', 'Vulnerabilities'], ['ransomware', 'Ransomware'], ['detection', 'Detection & hunting']]} />} />
         <Route path="/vulns" element={<Vulns />} />
         <Route path="/trends" element={<Trends />} />
+        <Route path="/ransomware" element={<Ransomware />} />
         <Route path="/glossary" element={<Glossary />} />
         <Route path="/group/:kind/:name" element={<GroupPage />} />
         <Route path="/vuln/:cve" element={<VulnDetail />} />

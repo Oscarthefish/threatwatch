@@ -93,6 +93,10 @@ DEFAULT_SOURCES: list[SourceDef] = [
     SourceDef("hudson-rock-weekly", "Hudson Rock Threat Feeds weekly report", "rss",
               "https://www.infostealers.com/feed/?post_type=threat-report", "https://www.infostealers.com/threat-report/",
               2, "GLOBAL", ["threat-intel"], 1440, max_severity=1),
+    # Leak-site claims aggregated by ransomware.live (free API v2: personal use only, 1 request/minute per endpoint;
+    # verified 2026-11-18). Claims are the groups' own statements, shown as unverified. See app/ingest/ransom.py.
+    SourceDef("ransomware-live", "ransomware.live leak-site claims", "ransom_claims", "https://api.ransomware.live/v2/recentvictims",
+              "https://www.ransomware.live/", 2, "GLOBAL", [], 120),
 ]
 
 

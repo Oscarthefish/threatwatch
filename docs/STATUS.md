@@ -49,6 +49,7 @@ _Last updated 2026-11-18._
 - ✅ Breaking reorganised; follow alerts count only facts stated alongside the subject; search passages highlighted; date checks
 - ✅ Trends page and Today panel; threat group profiles with weekly charts
 - ✅ MITRE ATT&CK groups and software synced weekly; technique links; further reading from CVE records and KEV
+- ✅ Ransomware page (leak-site claims from ransomware.live: active groups, rising and falling, sectors, countries, NZ and Australia, recent claims linked to news) and claims panels on ransomware group profiles
 - ✅ "Keep me signed in on this device" (180 days, renewed on use), signed-in devices list with remote sign-out; a server that cannot be reached no longer shows the sign-in form
 - ✅ Hudson Rock (InfoStealers) research feed and Threat Feeds weekly report; the weekly report is context only (see DECISIONS.md)
 
@@ -57,6 +58,7 @@ _Last updated 2026-11-18._
 - Rule-based entity dictionaries (actors, malware, vendors) are curated lists; unknown names are only picked up by AI extraction (when enabled) or by watch terms you type.
 - Feeds often provide only a summary, so extraction/IOCs are limited to what the feed text contains; the full article page is not scraped (licensing/robots respect).
 - NCSC NZ has no feed; its HTML adapter depends on the current page markup and will need updating if the site changes (failures surface on the Settings page).
+- Ransomware claims use ransomware.live's free API (personal use only; slightly delayed versus its PRO API). Work use would need a free PRO key (`url` change plus a key header, not built). Claims are unverified and news links depend on a collected story naming the victim exactly.
 - Vendor research is single-source until another publisher covers it; vendor sensor statistics (Hudson Rock weekly report) are never treated as confirmed activity.
 - Without AI, “confirmed vs uncertain” is approximated by source authority/corroboration of headlines, and briefing summaries are publishers’ excerpts.
 - Frontend has type-checking and lint but no automated UI tests; UI was verified manually via headless Chrome screenshots.

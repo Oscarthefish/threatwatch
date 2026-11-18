@@ -14,9 +14,9 @@ interface Status {
 }
 
 const KIND: Record<string, string> = {
-  rss: 'RSS / Atom feed', ncsc_nz_html: 'Public alerts page', kev: 'CISA KEV catalogue (JSON)', epss: 'FIRST EPSS API', cve_enrich: 'CVE.org API', attack: 'MITRE ATT&CK (STIX, GitHub)',
+  rss: 'RSS / Atom feed', ncsc_nz_html: 'Public alerts page', kev: 'CISA KEV catalogue (JSON)', epss: 'FIRST EPSS API', cve_enrich: 'CVE.org API', attack: 'MITRE ATT&CK (STIX, GitHub)', ransom_claims: 'ransomware.live API (leak-site claims)',
 }
-const DATA_KINDS = new Set(['kev', 'epss', 'cve_enrich', 'attack'])
+const DATA_KINDS = new Set(['kev', 'epss', 'cve_enrich', 'attack', 'ransom_claims'])
 const every = (m: number) => (m >= 10080 && m % 10080 === 0 ? (m === 10080 ? 'weekly' : `every ${m / 10080} weeks`) : m >= 1440 && m % 1440 === 0 ? (m === 1440 ? 'daily' : `every ${m / 1440} days`) : m >= 60 && m % 60 === 0 ? `every ${m / 60} h` : `every ${m} min`)
 
 function b64ToUint8(b64: string) {

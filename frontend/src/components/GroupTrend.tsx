@@ -6,6 +6,7 @@ import type { ArticleBrief, AttackEntry } from '../types'
 import { ColumnChart, DataTable, type Column } from './charts'
 import { groupPath, isGroupKind, longDay, SEV } from './trendsData'
 import { Loading } from './ui'
+import type { GroupClaims } from './ransom'
 
 export interface GroupProfile {
   kind: 'actor' | 'ransomware' | 'malware'; name: string; aliases: string[]; known: boolean; days: number
@@ -16,6 +17,7 @@ export interface GroupProfile {
   related: Record<string, { type: string; value: string; stories: number; name: string | null; url?: string | null }[]>
   articles: ArticleBrief[]; watch: { id: number; title: string } | null
   attack: AttackEntry | null; attack_synced_at: string | null
+  claims: GroupClaims | null
 }
 
 export { groupPath, isGroupKind }

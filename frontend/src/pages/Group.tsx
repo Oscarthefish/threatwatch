@@ -3,9 +3,10 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { api, ApiError } from '../api'
 import { ArticleCard, BackLink, Empty, ErrorBox, ExtLink, Eyebrow, fmtDate, Loading, usePageTitle, useToast } from '../components/ui'
-import { RankBars } from '../components/charts'
+import { ColumnChart, DataTable, RankBars, type Column } from '../components/charts'
 import { GroupTrendChart, groupPath, isGroupKind, useGroup } from '../components/GroupTrend'
-import { longDay } from '../components/trendsData'
+import { day, longDay } from '../components/trendsData'
+import { CLAIMS, ClaimList, countryName, type GroupClaims } from '../components/ransom'
 import { IconEye } from '../components/icons'
 
 const KIND_LABEL: Record<string, string> = { actor: 'Threat actor', ransomware: 'Ransomware group', malware: 'Malware or tool' }
@@ -77,6 +78,7 @@ export default function GroupPage() {
       <div className="doc-grid mt-4">
         <div className="doc-main">
           <GroupTrendChart g={g} days={days} onDays={setDays} />
+          {g.kind === 'ransomware' && <ClaimsPanel name={g.name} days={days} c={g.claims} />}
 
           <section aria-labelledby="g-rep">
             <div className="section-head"><h2 id="g-rep">Reports naming {g.name}</h2><span className="xsmall muted">Newest first</span></div>
@@ -138,5 +140,45 @@ export default function GroupPage() {
         </aside>
       </div>
     </div>
+  )
+}
+
+function ClaimsPanel({ name, days, c }: { name: string; days: number; c: GroupClaims | null }) {
+  if (!c) {
+    return (
+      <section className="panel" aria-labelledby="g-claims">
+        <header><h2 id="g-claims">Leak-site claims</h2></header>
+        <div className="body"><p className="small muted mb-0">No leak-site claims by {name} have been collected. Claims come from ransomware.live and cover the last three months.</p></div>
+      </section>
+    )
+  }
+  const cols: Column[] = c.weekly.map((w) => ({ label: day(w.start), title: `Week of ${longDay(w.start)}`, partial: w.partial, values: { count: w.count } }))
+  return (
+    <section className="panel" aria-labelledby="g-claims">
+      <header><h2 id="g-claims">Leak-site claims</h2><ExtLink className="small" href={c.tracker_url}>{name} on ransomware.live</ExtLink></header>
+      <div className="body">
+        <p className="small">
+          {c.current} claim{c.current === 1 ? '' : 's'} in the last {days} days{c.previous || !c.comparison_indicative ? `, ${c.previous} in the ${days} days before` : ''}.
+          Last claim {fmtDate(c.last_seen).split(',')[0]}.
+        </p>
+        <ColumnChart columns={cols} series={CLAIMS} label={`${name} leak-site claims per week`} height={150} partialNote="Before collection: incomplete" />
+        <DataTable caption={`${name} leak-site claims per week`} head={['Week', 'Claims', 'Complete']} rows={c.weekly.map((w, i) => [cols[i].title, w.count, w.partial ? 'No' : 'Yes'])} />
+        <div className="claims-split">
+          <div>
+            <h3 className="mini-h">Sectors</h3>
+            {c.sectors.length ? <RankBars showPrev={false} unit="claims" rows={c.sectors.map((s) => ({ key: s.name, name: s.name, value: s.n }))} />
+              : <p className="xsmall muted">No sector given.</p>}
+          </div>
+          <div>
+            <h3 className="mini-h">Countries</h3>
+            {c.countries.length ? <RankBars showPrev={false} unit="claims" rows={c.countries.map((x) => ({ key: x.code, name: countryName(x.code), value: x.n }))} />
+              : <p className="xsmall muted">No country given.</p>}
+          </div>
+        </div>
+        <h3 className="mini-h">Recent claims</h3>
+        <ClaimList claims={c.recent} hideGroup />
+        <p className="xsmall faint mt-3 mb-0">These are {name}'s own claims, collected by ransomware.live, and are not verified. Threat Watch never links to the leak site itself.</p>
+      </div>
+    </section>
   )
 }

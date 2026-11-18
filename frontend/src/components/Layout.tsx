@@ -6,7 +6,7 @@ import { Sheet } from './Sheet'
 import { ShortcutsSheet, useShortcuts } from './Shortcuts'
 import { TourProvider, tourSeen, useTour } from './Tour'
 import { timeAgo } from './ui'
-import { IconBell, IconBolt, IconBook, IconBookmark, IconBug, IconChart, IconEye, IconCompass, IconGlobe, IconKeyboard, IconMoon, IconMore, IconSearch, IconSearchDoc, IconSettings, IconSun, IconTarget, IconToday } from './icons'
+import { IconBell, IconBolt, IconBook, IconBookmark, IconBug, IconChart, IconLock, IconEye, IconCompass, IconGlobe, IconKeyboard, IconMoon, IconMore, IconSearch, IconSearchDoc, IconSettings, IconSun, IconTarget, IconToday } from './icons'
 
 type NavItem = { to: string; label: string; short?: string; icon: (p: React.SVGProps<SVGSVGElement>) => React.ReactElement; end?: boolean }
 
@@ -16,6 +16,7 @@ export const INTEL: NavItem[] = [
   { to: '/intel', label: 'Threat intelligence', short: 'Intel', icon: IconTarget },
   { to: '/vulns', label: 'Vulnerabilities', short: 'Vulns', icon: IconBug },
   { to: '/trends', label: 'Trends', icon: IconChart },
+  { to: '/ransomware', label: 'Ransomware', icon: IconLock },
   { to: '/soc', label: 'SOC & DFIR', icon: IconSearchDoc },
   { to: '/apac', label: 'NZ & APAC', icon: IconGlobe },
 ]
@@ -175,7 +176,7 @@ export function Layout({ children }: { children: ReactNode }) {
       {more && (
         <Sheet title="More" onClose={() => setMore(false)}>
           <nav className="navlist" aria-label="More sections">
-            {[INTEL[2], INTEL[4], INTEL[5], INTEL[6], YOURS[1]].map((n) => <Link key={n.to} to={n.to}><n.icon />{n.label}</Link>)}
+            {[INTEL[2], INTEL[4], INTEL[5], INTEL[6], INTEL[7], YOURS[1]].map((n) => <Link key={n.to} to={n.to}><n.icon />{n.label}</Link>)}
             <Link to="/notifications"><IconBell />Notifications {unread > 0 && <span className="badge">{unread}</span>}</Link>
             <Link to="/glossary"><IconBook />Glossary</Link>
             <Link to="/settings"><IconSettings />Settings</Link>

@@ -181,7 +181,7 @@ Today and article entity lists link here, and followed actor/malware items show 
 - **Settings:** ATT&CK appears under Reference data with its health and switch; intervals read "weekly", "daily", etc.
 
 ## Glossary
-`/glossary` (`pages/Glossary.tsx`, content in `components/glossary.ts`): 31 terms in three groups (vulnerabilities and
+`/glossary` (`pages/Glossary.tsx`, content in `components/glossary.ts`): 33 terms in three groups (vulnerabilities and
 scores, threat intelligence, Threat Watch terms). Each entry has a plain definition, an "In Threat Watch" line saying
 what the app does with it, related terms, and a link to the official home of the standard where there is one. Entries
 are linkable (`/glossary#kev`) and highlight on arrival; the list filters as you type.
@@ -190,3 +190,18 @@ are linkable (`/glossary#kev`) and highlight on arrival; the list filters as you
 help line, the Breaking KEV panel, Confidence and "How severity works" on articles, share of stories on Trends, and the
 severity popover everywhere. Keep the "In Threat Watch" lines in step with the code (severity rules:
 `backend/app/intel/classify.py`).
+
+## Ransomware page and claims panels
+
+`/ransomware` (`pages/Ransomware.tsx`, shared pieces in `components/ransom.tsx`), sidebar after Trends, shortcut `g w`.
+- Tiles: claims, groups posting, most claimed sector, New Zealand and Australia claims (90 days).
+- Claims over time (single series, teal), most active groups (rank bars with previous-period tick, weekly sparkline,
+  top sectors and countries as the subtitle), rising and falling by share of claims (dumbbells; groups under 8 claims
+  across both periods left out), sectors and countries (rank bars). Every chart has a table view.
+- Claim lists (NZ and Australia, recent) show 6 with "Show all"; each claim shows the group (profile link), sector,
+  country, "In the news" links to collected stories naming the victim, and the tracker record. Never a leak-site link.
+- Copy always calls these claims and says they are unverified; the glossary has "Leak site" and "Leak-site claim".
+- Ransomware group profiles gain a "Leak-site claims" panel (weekly chart, sectors, countries, recent claims, link to
+  the group on ransomware.live); groups known only from claims get a profile too.
+- Verified 2026-11-18 on real data: 0 axe violations and no overflow across the page (30 and 90 days), a known group, a
+  claims-only group and an actor profile, at 390 and 1366 px, light and dark.

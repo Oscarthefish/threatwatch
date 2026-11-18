@@ -34,6 +34,12 @@ Docker group note: the `deploy` user’s docker group membership is root-equival
   feeds or paid/restricted APIs (Cavalier) are used. Content is copyright of the publisher and shown only to the
   single owner of this private instance.
 
+- ransomware.live (leak-site claims) is read through its free API v2, which is for personal use only and limited to
+  one request per minute per endpoint; Threat Watch makes one request per collection (every 2 h) plus a one-time
+  three-month backfill spaced 61 s apart. Only the group, victim name, domain, sector, country, dates and the tracker's
+  record URL are stored: no leak descriptions, screenshots or leak-site addresses, and the UI never links to a leak site.
+  Victim names are criminal claims and are always shown as unverified.
+
 ## Logging
 
 Application logs contain source keys, counts, HTTP status classes and exception types — not

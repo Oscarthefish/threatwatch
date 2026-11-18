@@ -3,6 +3,27 @@
 Consequential product and architecture decisions, newest first. Each records what was decided, why, and what it
 rules out.
 
+## 2026-11-18: Ransomware leak-site claims from ransomware.live
+
+**Decision.** Add a Ransomware page and claims panels on ransomware group profiles, fed by ransomware.live's free
+API v2 (`/v2/recentvictims` each collection; a one-time three-month backfill from `/v2/victims/{year}/{month}`).
+
+**Why.** Collected news named only about five ransomware stories and three groups in 30 days, and article victim
+extraction is unreliable, so trends from news alone would be thin and misleading. The tracker adds about 50 claims a
+day with group, sector (92%) and country (86%).
+
+**Terms.** The free API is for personal use only, rate limited to one request a minute per endpoint, and slightly
+delayed. The owner confirmed Threat Watch is personal use. If it is ever used for work, switch to the free PRO API
+(key required) and read its terms first. robots.txt allows the API; the site asks not to be used for AI training,
+which this does not do.
+
+**Handling.** Claims are criminals' statements: always labelled unverified, never notified, never linked to a leak
+site, and stored with identifying fields only (no descriptions or screenshots). A claim links to Threat Watch
+reporting only when a collected story names the victim. Rising and falling use share of claims, as on Trends.
+
+**Ruled out.** RansomLook as the source (less structured: no sector or country fields), notifications for claims
+(including New Zealand ones) in this version, and showing the groups' leak descriptions.
+
 ## 2026-11-18: Trusted devices instead of re-entering the password
 
 **Problem.** The phone app kept showing the sign-in form although its 30-day session was valid. The cause was the
