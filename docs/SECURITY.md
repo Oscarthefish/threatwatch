@@ -28,6 +28,12 @@ Docker group note: the `deploy` user’s docker group membership is root-equival
   records, CISA KEV, MITRE) or are derived from a validated technique ID. Only `http(s)` URLs are rendered, always
   with `target="_blank" rel="noopener noreferrer"`, so the destination gets no referrer and no window handle.
 
+- Hudson Rock (infostealers.com) is read only through its public RSS feeds (`robots.txt` allows all agents, checked
+  2026-11-17), with conditional requests and at most every 6 h (research) and 24 h (weekly report). Like every feed,
+  only the feed's own text is stored, with the original link and attribution; pages are not scraped, and no IOC
+  feeds or paid/restricted APIs (Cavalier) are used. Content is copyright of the publisher and shown only to the
+  single owner of this private instance.
+
 ## Logging
 
 Application logs contain source keys, counts, HTTP status classes and exception types — not

@@ -140,7 +140,7 @@ def process_article(conn: sqlite3.Connection, article_id: int) -> None:
     cap = SEVERITY_CAPS.get(a["source_key"])
     if cap is not None and c.severity > cap:
         c.severity = cap
-        c.reasons.append("Severity capped for this source type (release notes / podcast)")
+        c.reasons.append("Severity capped for this source type (release notes, podcast or statistical report)")
         c.sections = [x for x in c.sections if x != "breaking"]
     acts = soc_actions.derive(a["title"], body, c.severity, [*c.tags, *c.sections], _display_entities(conn, article_id), vfacts)
     conn.execute(

@@ -35,7 +35,7 @@ class SourceDef:
     sections: list[str] = field(default_factory=list)
     interval_minutes: int = 30
     enabled: bool = True
-    max_severity: int = 4  # cap for release notes / podcasts that mention many CVEs in passing
+    max_severity: int = 4  # cap for release notes, podcasts and statistical reports that mention many subjects in passing
 
 
 # Feed URLs were verified reachable on 2026-11-09.
@@ -83,6 +83,16 @@ DEFAULT_SOURCES: list[SourceDef] = [
     SourceDef("splunk-security-content", "Splunk Security Content releases", "rss",
               "https://github.com/splunk/security_content/releases.atom", "https://research.splunk.com/", 2, "GLOBAL",
               ["soc-dfir"], 720, max_severity=1),
+    # Hudson Rock (verified 2026-11-17; robots.txt allows all). The research feed carries first-party
+    # infostealer and ClickFix investigations about weekly; the site-wide /feed/ is avoided because it also
+    # carries the compromised-domain statistics report. The Threat Feeds weekly report is aggregate sensor
+    # counts (C2, phishing kit and ClickFix sightings), not confirmed infections or attacks, so it is capped at
+    # low, treated as a roundup ("weekly report" in the title) and never moves a followed item.
+    SourceDef("hudson-rock", "Hudson Rock research (InfoStealers)", "rss", "https://www.infostealers.com/learn-info-stealers/feed/",
+              "https://www.infostealers.com/", 2, "GLOBAL", ["threat-intel"], 360),
+    SourceDef("hudson-rock-weekly", "Hudson Rock Threat Feeds weekly report", "rss",
+              "https://www.infostealers.com/feed/?post_type=threat-report", "https://www.infostealers.com/threat-report/",
+              2, "GLOBAL", ["threat-intel"], 1440, max_severity=1),
 ]
 
 

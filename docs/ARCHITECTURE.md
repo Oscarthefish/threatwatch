@@ -66,6 +66,9 @@ Every 2 hours, around the clock (`TW_INGEST_INTERVAL_MINUTES`; feeds such as The
 2. Exact dedupe by canonical URL (tracking params stripped) and source GUID. Original URL kept.
 3. Extract entities, ensure CVE stubs exist, classify (sections, tags, severity + reasons).
 4. Near-duplicate clustering across *different* sources (title Jaccard + shared strong entities; template titles with disjoint entities are never merged). Cluster size drives confidence (`official` / `multi-source` / `corroborated` / `single-source`).
+   Severity caps per source (`max_severity`) keep release notes, podcasts and statistical reports out of Breaking;
+   titles with "weekly report", "week in review" and similar are tagged `roundup` (severity −1, never a development
+   for a followed item, excluded from trend counts).
 5. KEV (each run), EPSS (twice daily, batched 100 CVEs/request), CVE.org enrichment (≤60 CVEs/run, 1 req/s/host).
 6. Optional AI summaries for the top-ranked new cluster representatives.
 7. Match new articles against active watches.
@@ -132,6 +135,8 @@ A linked report's *significance* is judged only on what it says about the follow
   subjects' names; the assessment says how many other items the report covers.
 - A KEV catalogue update that names the followed CVE is recorded as "Added to the CISA KEV catalogue".
 - Exploitation counts only when stated alongside the subject in broad reports.
+- A roundup or weekly report that only mentions a followed subject in passing is not queued for review; a definite
+  match still links, as silent context.
 
 Stored assessments were recalculated once on upgrade (`reassess_all`, gated by `assess_rules_version`); AI
 assessments and the origin report were left as they were, and each affected watch's timeline records the change.

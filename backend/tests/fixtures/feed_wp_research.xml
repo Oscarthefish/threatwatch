@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- SYNTHETIC fixture shaped like a WordPress research feed (RSS 2.0 + content:encoded). Not real reporting. -->
+<rss version="2.0" xmlns:content="http://purl.org/rss/1.0/modules/content/" xmlns:dc="http://purl.org/dc/elements/1.1/">
+<channel>
+<title>Articles | FIXTURE Stealer Research</title>
+<link>https://stealers.example/</link>
+<item>
+<title>Remus Stealer Adds a Mailbox Persistence Module: FIXTURE Lab Investigates</title>
+<link>https://stealers.example/article/remus-stealer-mailbox-module/</link>
+<dc:creator><![CDATA[FIXTURE Analyst]]></dc:creator>
+<pubDate>Mon, 09 Nov 2026 13:33:14 +0000</pubDate>
+<category><![CDATA[Blog Post]]></category>
+<guid isPermaLink="false">https://stealers.example/?p=101</guid>
+<description><![CDATA[<p>The Remus Stealer developer is advertising a module that keeps mailbox access after a password reset&#8230;</p>]]></description>
+<content:encoded><![CDATA[<h2>Remus Stealer / November 9, 2026</h2>
+<p>FIXTURE Lab reviewed a forum post in which the Remus Stealer developer advertises a module that keeps mailbox
+access after the victim resets their password. The claim has not been independently verified; it is not a zero-day.</p>
+<p>Defenders should review session token reuse and revoke refresh tokens after a stealer infection.</p>
+<p>The post <a href="https://stealers.example/article/remus-stealer-mailbox-module/">Remus Stealer Adds a Mailbox Persistence Module</a> appeared first on FIXTURE Stealer Research.</p>]]></content:encoded>
+</item>
+<item>
+<title>FIXTURE Lab Announces a Data Partnership With Example Analytics</title>
+<link>https://stealers.example/article/fixture-partnership/</link>
+<pubDate>Wed, 14 Oct 2026 10:40:45 +0000</pubDate>
+<category><![CDATA[FIXTURE Lab]]></category>
+<guid isPermaLink="false">https://stealers.example/?p=102</guid>
+<description><![CDATA[<p>FIXTURE Lab will supply data to a new investigations product.</p>]]></description>
+</item>
+</channel>
+</rss>

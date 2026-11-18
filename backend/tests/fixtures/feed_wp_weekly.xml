@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- SYNTHETIC fixture shaped like a vendor's weekly sensor-statistics report feed. Numbers are invented. -->
+<rss version="2.0" xmlns:content="http://purl.org/rss/1.0/modules/content/">
+<channel>
+<title>Threat Reports Archive | FIXTURE Stealer Research</title>
+<link>https://stealers.example/</link>
+<item>
+<title>Threat Feeds Weekly Report: 2026-11-09 &#8211; 2026-11-16</title>
+<link>https://stealers.example/threat-report/threat-feeds-weekly-report-2026-11-09-2026-11-16/</link>
+<pubDate>Mon, 16 Nov 2026 00:00:00 +0000</pubDate>
+<guid isPermaLink="false">https://stealers.example/?p=201</guid>
+<content:encoded><![CDATA[<p>Threat Feeds Weekly Report &#8212; aggregated statistics only: C2 infrastructure, PhaaS kit hosts and ClickFix
+monitor activity.</p>
+<p>12,345 Total Feed Sightings. C2 Intelligence Feed: 9,876 Host Sightings, 21 Distinct Families.</p>
+<p>Top Stealer Families: socgholish 1,035 &#183; Remus Stealer 23 &#183; amos 10 &#183; lumma 9 &#183; vidar 9</p>
+<p>ClickFix Monitor: 99,999 Total Sightings, 1,234 Malicious Flagged, 567 Fake CAPTCHA Found. A panel advertising a
+zero-day loader was compromised and exploited in the wild according to forum chatter.</p>
+<p>The post Threat Feeds Weekly Report appeared first on FIXTURE Stealer Research.</p>]]></content:encoded>
+</item>
+</channel>
+</rss>

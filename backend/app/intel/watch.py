@@ -266,6 +266,10 @@ def evaluate(conn, watch: dict, article: dict, use_ai: bool = True) -> str | Non
     if not met or score < CANDIDATE_THRESHOLD:
         return None
     status = "linked" if score >= LINK_THRESHOLD else "candidate"
+    if status == "candidate" and "roundup" in set(jloads(article.get("tags"))):
+        # A roundup or weekly statistics report can only ever be minor context for a followed item, so a
+        # passing mention is not worth a review (or an AI check); definite matches still link, silently.
+        return None
     needs_ai = status == "candidate" or (watch["kind"] == "incident" and not any("headline" in r for r in reasons))
     if needs_ai and use_ai and get_settings().ai_enabled:
         titles = [r[0] for r in conn.execute(
@@ -430,7 +434,7 @@ def _heuristic_assess(e: dict, terms: list[str], known_clusters: set[int], known
     about = textutil.near_text(body, terms) if terms else ""
     broad = _is_broad(e, ents)
     if "roundup" in tags:
-        return "minor", "Mentioned in a news roundup or podcast; read it for context."
+        return "minor", "Mentioned in a roundup, weekly report or podcast; read it for context."
     own = {t.lower() for t in terms}
     candidates = {x for x in ents - known_ents if x[0] in _CHANGE_TYPES and x[1].lower() not in own}
     scope = (about or ("" if broad else body)).lower()

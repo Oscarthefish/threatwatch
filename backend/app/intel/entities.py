@@ -121,6 +121,7 @@ MALWARE: dict[str, list[str]] = {
     "SystemBC": [],
     "Lumma Stealer": ["LummaC2", "Lumma"],
     "RedLine Stealer": ["RedLine"],
+    "Remus Stealer": ["Remus"],
     "Vidar": [],
     "StealC": [],
     "Rhadamanthys": [],
@@ -316,7 +317,7 @@ _ATTACK_KW = [(re.compile(p, re.I), t) for p, t in ATTACK_KEYWORDS]
 # Ambiguous family names that are common English words need a qualifier nearby.
 _NEEDS_QUALIFIER = {"Play", "Fog", "Hive", "Chaos", "Nova", "Embargo", "Kraken", "Medusa", "Cactus", "Interlock",
                     "Termite", "Rapture", "Everest", "Snake", "Predator", "Pegasus", "Mythic", "Havoc", "Sliver",
-                    "Agenda", "Royal", "Lynx", "Warlock", "Phobos", "Sinobi", "Lazarus"}
+                    "Agenda", "Royal", "Lynx", "Warlock", "Phobos", "Sinobi", "Lazarus", "Remus"}
 _QUALIFIER = re.compile(r"ransomware|gang|operators?|affiliates?|malware|spyware|threat actor|group|hackers?|c2|framework|apt|botnet|stealer|loader|backdoor", re.I)
 
 

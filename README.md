@@ -86,6 +86,7 @@ copy to your Mac. Secrets live in `/etc/threatwatch/threatwatch.env` on the serv
 - [Deployment](docs/DEPLOYMENT.md): server setup, deploy, updates, backup and restore
 - [Security](docs/SECURITY.md): threat model, controls, external data and links
 - [Implementation status](docs/STATUS.md): what is done and what is not
+- [Decisions](docs/DECISIONS.md): consequential product and architecture decisions
 - [Configuration example](deploy/threatwatch.example.env)
 
 ## Data integrity rules

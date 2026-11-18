@@ -2,14 +2,14 @@
 
 Legend: ✅ implemented and verified · 🟡 implemented, not yet verified in its real environment · ⛔ not done
 
-_Last updated 2026-11-09._
+_Last updated 2026-11-17._
 
 ## Phase 1 — Foundation
 - ✅ Git repository, structure, pinned dependencies
 - ✅ SQLite schema with migrations, WAL, FTS5
 - ✅ Docker image (multi-stage, non-root, read-only) and Compose stack (web + worker), health checks, resource limits, restart policy
 - ✅ FastAPI backend with authentication on all private endpoints
-- ✅ Real ingestion: 19 sources verified live (BleepingComputer, SANS ISC, The DFIR Report, Google Threat Intelligence/Mandiant, The Record, NCSC NZ, CISA KEV, FIRST EPSS, CVE.org, Risky Bulletin, Risky Business, CISA advisories, ASD’s ACSC, Microsoft Security, Unit 42, Red Canary, Huntress, SigmaHQ releases, Splunk Security Content releases)
+- ✅ Real ingestion: 19 sources verified live (BleepingComputer, SANS ISC, The DFIR Report, Google Threat Intelligence/Mandiant, The Record, NCSC NZ, CISA KEV, FIRST EPSS, CVE.org, Risky Bulletin, Risky Business, CISA advisories, ASD’s ACSC, Microsoft Security, Unit 42, Red Canary, Huntress, SigmaHQ releases, Splunk Security Content releases); Hudson Rock research and Threat Feeds weekly report added 2026-11-17 (21 feeds plus MITRE ATT&CK)
 - ✅ Responsive React/TypeScript frontend; article browsing (verified at 390 px and 1366 px, light/dark, no horizontal overflow)
 
 ## Phase 2 — Intelligence
@@ -49,12 +49,14 @@ _Last updated 2026-11-09._
 - ✅ Breaking reorganised; follow alerts count only facts stated alongside the subject; search passages highlighted; date checks
 - ✅ Trends page and Today panel; threat group profiles with weekly charts
 - ✅ MITRE ATT&CK groups and software synced weekly; technique links; further reading from CVE records and KEV
+- ✅ Hudson Rock (InfoStealers) research feed and Threat Feeds weekly report; the weekly report is context only (see DECISIONS.md)
 
 ## Known limitations
 - Sources are defined in code (`backend/app/ingest/sources.py`); the UI can enable/disable them but not add new ones.
 - Rule-based entity dictionaries (actors, malware, vendors) are curated lists; unknown names are only picked up by AI extraction (when enabled) or by watch terms you type.
 - Feeds often provide only a summary, so extraction/IOCs are limited to what the feed text contains; the full article page is not scraped (licensing/robots respect).
 - NCSC NZ has no feed; its HTML adapter depends on the current page markup and will need updating if the site changes (failures surface on the Settings page).
+- Vendor research is single-source until another publisher covers it; vendor sensor statistics (Hudson Rock weekly report) are never treated as confirmed activity.
 - Without AI, “confirmed vs uncertain” is approximated by source authority/corroboration of headlines, and briefing summaries are publishers’ excerpts.
 - Frontend has type-checking and lint but no automated UI tests; UI was verified manually via headless Chrome screenshots.
 - Single user only; no multi-user roles.

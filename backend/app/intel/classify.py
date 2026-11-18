@@ -29,7 +29,7 @@ ACTOR = _P(r"threat actor|state-sponsored|nation-state|\bAPT\b|espionage|hacking
 TTP = _P(r"initial access|persistence|lateral movement|privilege escalation|defense evasion|command and control|exfiltration|MITRE ATT&CK")
 VULN = _P(r"\bvulnerabilit(y|ies)\b|\bCVE-\d{4}-\d+|\bpatch(es|ed)?\b|security update|\bflaw\b|\bbug\b|advisory|remote code execution|\bRCE\b|authentication bypass|privilege escalation")
 SOC = _P(r"detection|threat hunt|hunting|\bsigma\b|\bsplunk\b|\bKQL\b|\bSPL\b|\bYARA\b|\bEDR\b|\bSIEM\b|forensic|DFIR|incident response|investigat(e|ion)|telemetry|sysmon|event log|playbook|triage|\bIOCs?\b|indicators of compromise|\bSOC\b|blue team")
-ROUNDUP = _P(r"week in (review|ransomware|security)|weekly (recap|roundup|update)|newsletter|podcast|^risky (business|bulletin)|sponsored|webinar|\bdeal\b|% off|black friday|giveaway|how to (buy|save)")
+ROUNDUP = _P(r"week in (review|ransomware|security)|weekly (recap|roundup|update|report)|newsletter|podcast|^risky (business|bulletin)|sponsored|webinar|\bdeal\b|% off|black friday|giveaway|how to (buy|save)")
 
 
 @dataclass
@@ -129,7 +129,7 @@ def classify(
         reasons.append(f"Official advisory ({source.get('name')})")
     if "roundup" in tags:
         sev -= 1
-        reasons.append("Roundup / podcast / commentary format")
+        reasons.append("Roundup, weekly report, podcast or commentary format")
     if not reasons:
         reasons.append("General security reporting")
     c.severity = max(0, min(4, sev))
