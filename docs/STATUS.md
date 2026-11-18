@@ -49,7 +49,7 @@ _Last updated 2026-11-18._
 - ✅ Breaking reorganised; follow alerts count only facts stated alongside the subject; search passages highlighted; date checks
 - ✅ Trends page and Today panel; threat group profiles with weekly charts
 - ✅ MITRE ATT&CK groups and software synced weekly; technique links; further reading from CVE records and KEV
-- ✅ Ransomware page (leak-site claims from ransomware.live: active groups, rising and falling, sectors, countries, NZ and Australia, recent claims linked to news) and claims panels on ransomware group profiles
+- ✅ Ransomware page (leak-site claims from ransomware.live: active groups, rising and falling, sectors, countries, NZ and Australia, recent claims linked to news) and claims panels on ransomware group profiles; alerts for new claims against New Zealand organisations (Settings → Alerts)
 - ✅ "Keep me signed in on this device" (180 days, renewed on use), signed-in devices list with remote sign-out; a server that cannot be reached no longer shows the sign-in form
 - ✅ Hudson Rock (InfoStealers) research feed and Threat Feeds weekly report; the weekly report is context only (see DECISIONS.md)
 

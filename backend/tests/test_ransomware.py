@@ -158,3 +158,48 @@ def test_group_profiles_include_claims(client, conn):
 def test_requires_auth(conn):
     from app.main import create_app
     assert TestClient(create_app()).get("/api/ransomware").status_code == 401
+
+
+def _alerts(conn):
+    return conn.execute("SELECT title, body, link FROM notifications WHERE kind='ransom_claim' ORDER BY id").fetchall()
+
+
+@respx.mock
+def test_new_nz_claim_alerts_once(conn, src):
+    from app.db import set_setting
+    set_setting(conn, "ransom_claims_backfilled", "x")  # skip backfill
+    respx.get(RECENT).mock(return_value=httpx.Response(200, json=[
+        claim("Contoso Aotearoa", "thegentlemen", 1, country="NZ", sector="Healthcare", domain="contoso.example"),
+        claim("Fabrikam Australia", "qilin", 1, country="AU"),
+        claim("Old Kiwi Co", "akira", 20, country="NZ"),  # first seen weeks ago: history, not news
+    ]))
+    n, detail = ransom.ingest_claims(conn, src, sleep=lambda s: None)
+    a = _alerts(conn)
+    assert len(a) == 1 and "1 New Zealand alert" in detail
+    assert a[0]["title"] == "Ransomware claim against a New Zealand organisation: Contoso Aotearoa"
+    assert "The Gentlemen posted Contoso Aotearoa (Healthcare, contoso.example)" in a[0]["body"] and "not verified" in a[0]["body"]
+    assert a[0]["link"] == "/ransomware"
+    ransom.ingest_claims(conn, src, sleep=lambda s: None)
+    assert len(_alerts(conn)) == 1  # the same claim never alerts twice
+
+
+@respx.mock
+def test_backfill_never_alerts(conn, src):
+    respx.get(RECENT).mock(return_value=httpx.Response(200, json=[]))
+    respx.get(url__startswith=MONTH).mock(return_value=httpx.Response(200, json=[claim("Backfilled Kiwi Ltd", "qilin", 2, country="NZ")]))
+    ransom.ingest_claims(conn, src, sleep=lambda s: None)
+    assert conn.execute("SELECT COUNT(*) FROM ransomware_claims").fetchone()[0] == 1 and _alerts(conn) == []
+
+
+@respx.mock
+def test_nz_alerts_can_be_turned_off(client, conn):
+    from app.db import set_setting
+    pipeline.sync_sources(conn)
+    assert client.get("/api/alerts/prefs").json() == {"nz_ransom_claims": True}
+    assert client.put("/api/alerts/prefs", json={"nz_ransom_claims": False}).status_code == 403  # CSRF header required
+    assert client.put("/api/alerts/prefs", json={"nz_ransom_claims": False}, headers=H).json() == {"nz_ransom_claims": False}
+    set_setting(conn, "ransom_claims_backfilled", "x")
+    respx.get(RECENT).mock(return_value=httpx.Response(200, json=[claim("Contoso Aotearoa", "qilin", 1, country="NZ")]))
+    src = pipeline._source_dict(conn.execute("SELECT * FROM sources WHERE key='ransomware-live'").fetchone())
+    ransom.ingest_claims(conn, src, sleep=lambda s: None)
+    assert _alerts(conn) == []

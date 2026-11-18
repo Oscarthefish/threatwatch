@@ -86,6 +86,23 @@ def notifications(unread_only: bool = False, limit: int = Query(50, ge=1, le=200
     return {"items": [dict(r) for r in rows], "unread": unread}
 
 
+class AlertPrefs(BaseModel):
+    nz_ransom_claims: bool
+
+
+@router.get("/alerts/prefs")
+def alert_prefs(conn: sqlite3.Connection = Depends(get_db)):
+    from ..ingest.ransom import alerts_enabled
+    return {"nz_ransom_claims": alerts_enabled(conn)}
+
+
+@router.put("/alerts/prefs")
+def set_alert_prefs(body: AlertPrefs, conn: sqlite3.Connection = Depends(get_db)):
+    from ..db import set_setting
+    set_setting(conn, "alert_nz_ransom_claims", body.nz_ransom_claims)
+    return {"nz_ransom_claims": body.nz_ransom_claims}
+
+
 class ReadIn(BaseModel):
     ids: list[int] | None = None
     all: bool = False

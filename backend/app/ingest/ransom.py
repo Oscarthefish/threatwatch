@@ -98,15 +98,45 @@ def parse(content: bytes) -> list[dict]:
     return out
 
 
-def store(conn: sqlite3.Connection, rows: list[dict]) -> int:
+def store(conn: sqlite3.Connection, rows: list[dict], inserted: list[dict] | None = None) -> int:
     now, n = now_iso(), 0
     with tx(conn):
         for r in rows:
-            n += conn.execute(
+            added = conn.execute(
                 """INSERT OR IGNORE INTO ransomware_claims(record_url, group_raw, group_name, victim, domain, country, sector,
                    attack_date, discovered_at, retrieved_at) VALUES(?,?,?,?,?,?,?,?,?,?)""",
                 (r["record_url"], r["group_raw"], r["group_name"], r["victim"], r["domain"], r["country"], r["sector"],
                  r["attack_date"], r["discovered_at"], now)).rowcount
+            n += added
+            if added and inserted is not None:
+                inserted.append(r)
+    return n
+
+
+ALERT_COUNTRY = "NZ"
+ALERT_MAX_AGE_DAYS = 7  # a claim first seen longer ago is history, not news (the backfill never alerts)
+
+
+def alerts_enabled(conn: sqlite3.Connection) -> bool:
+    return get_setting(conn, "alert_nz_ransom_claims", True) is not False
+
+
+def alert_new_claims(conn: sqlite3.Connection, claims: list[dict]) -> int:
+    """One notification per new claim against a New Zealand organisation. Duplicates are suppressed by record URL."""
+    if not claims or not alerts_enabled(conn):
+        return 0
+    from ..intel.notify import notify
+    cutoff, n = iso(utcnow() - timedelta(days=ALERT_MAX_AGE_DAYS)), 0
+    for c in claims:
+        if c["country"] != ALERT_COUNTRY or c["discovered_at"] < cutoff:
+            continue
+        where = c["domain"] or ""
+        detail = ", ".join(x for x in (c["sector"], where) if x)
+        n += notify(
+            conn, kind="ransom_claim", title=f"Ransomware claim against a New Zealand organisation: {c['victim']}",
+            body=(f"{c['group_name']} posted {c['victim']}{f' ({detail})' if detail else ''} on its leak site. "
+                  "This is the group's claim and is not verified."),
+            link="/ransomware", dedupe_key=f"ransom:{c['record_url']}")
     return n
 
 
@@ -121,8 +151,10 @@ def _months(today: date, n: int) -> list[tuple[int, int]]:
 def ingest_claims(conn: sqlite3.Connection, src: dict, sleep=time.sleep) -> tuple[int, str]:
     """Returns (new claims, detail). Raises on a failed fetch of the recent list so the source shows the error."""
     base = src["url"].rsplit("/", 1)[0] if src["url"].endswith("/recentvictims") else API
-    new = store(conn, parse(fetch(src["url"], accept="application/json").content))
-    detail = f"{new} new claims"
+    fresh: list[dict] = []
+    new = store(conn, parse(fetch(src["url"], accept="application/json").content), fresh)
+    alerted = alert_new_claims(conn, fresh)
+    detail = f"{new} new claims" + (f", {alerted} New Zealand alert{'s' if alerted != 1 else ''}" if alerted else "")
     if not get_setting(conn, "ransom_claims_backfilled"):
         months = _months(utcnow().date(), BACKFILL_MONTHS)
         got = 0

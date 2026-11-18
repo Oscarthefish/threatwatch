@@ -71,7 +71,8 @@ Every 2 hours, around the clock (`TW_INGEST_INTERVAL_MINUTES`; feeds such as The
    for a followed item, excluded from trend counts).
 5. Ransomware leak-site claims from ransomware.live (`ingest/ransom.py`): the newest 100 claims each run; the first run also
    backfills three calendar months, one request a minute as the free API requires. Group names are mapped to the
-   entity dictionary (`thegentlemen` → The Gentlemen, `lockbit5` → LockBit).
+   entity dictionary (`thegentlemen` → The Gentlemen, `lockbit5` → LockBit). A new claim against a New Zealand
+   organisation (first seen within 7 days, never from the backfill) creates one `ransom_claim` notification.
 6. KEV (each run), EPSS (twice daily, batched 100 CVEs/request), CVE.org enrichment (≤60 CVEs/run, 1 req/s/host).
 7. Optional AI summaries for the top-ranked new cluster representatives.
 8. Match new articles against active watches.

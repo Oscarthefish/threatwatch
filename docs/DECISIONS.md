@@ -22,7 +22,12 @@ site, and stored with identifying fields only (no descriptions or screenshots). 
 reporting only when a collected story names the victim. Rising and falling use share of claims, as on Trends.
 
 **Ruled out.** RansomLook as the source (less structured: no sector or country fields), notifications for claims
-(including New Zealand ones) in this version, and showing the groups' leak descriptions.
+in general, and showing the groups' leak descriptions.
+
+**Update, same day: New Zealand claim alerts.** At the owner's request, a new claim against a New Zealand
+organisation creates one notification (push, held during quiet hours) worded as an unverified claim and linking to
+the Ransomware page. Only claims first seen in the last 7 days alert, the backfill never alerts, the record URL is
+the dedupe key, and Settings → Alerts turns it off. Other countries do not alert.
 
 ## 2026-11-18: Trusted devices instead of re-entering the password
 

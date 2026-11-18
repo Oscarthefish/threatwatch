@@ -5,7 +5,7 @@ import type { Notification } from '../types'
 import { Empty, ErrorBox, Loading, PageHeader } from '../components/ui'
 
 const KIND: Record<string, string> = {
-  watch_important: 'Important update', watch_update: 'New finding', digest: 'Daily digest', briefing: 'Briefing', system: 'System',
+  watch_important: 'Important update', watch_update: 'New finding', digest: 'Daily digest', briefing: 'Briefing', system: 'System', ransom_claim: 'Ransomware claim, New Zealand',
 }
 
 function dayLabel(iso: string) {

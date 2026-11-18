@@ -27,6 +27,34 @@ function b64ToUint8(b64: string) {
 
 type Device = { id: number; device: string; signed_in_at: string; last_seen: string; expires_at: string; trusted: boolean; current: boolean }
 
+function AlertPrefs() {
+  const qc = useQueryClient()
+  const toast = useToast()
+  const q = useQuery({ queryKey: ['alert-prefs'], queryFn: () => api.get<{ nz_ransom_claims: boolean }>('/api/alerts/prefs') })
+  const save = useMutation({
+    mutationFn: (on: boolean) => api.put<{ nz_ransom_claims: boolean }>('/api/alerts/prefs', { nz_ransom_claims: on }),
+    onSuccess: (r) => { qc.setQueryData(['alert-prefs'], r); toast(r.nz_ransom_claims ? 'New Zealand ransomware alerts on' : 'New Zealand ransomware alerts off') },
+    onError: () => toast('Could not save that setting. Try again.', 'error'),
+  })
+  if (q.isError) return <ErrorBox error={q.error} onRetry={() => q.refetch()} />
+  if (!q.data) return <Loading lines={2} />
+  return (
+    <>
+      <div className="row nowrap between top">
+        <div className="grow">
+          <div className="strong" id="nzr-l">Ransomware claims against New Zealand organisations</div>
+          <p className="xsmall muted mb-0" id="nzr-d">An alert when a ransomware group posts a New Zealand organisation on its leak site, usually within two hours of ransomware.live seeing it. These are the groups' own claims and are not verified. Held during quiet hours like other alerts.</p>
+        </div>
+        <label className="switch">
+          <input type="checkbox" checked={q.data.nz_ransom_claims} disabled={save.isPending} onChange={(e) => save.mutate(e.target.checked)}
+            aria-labelledby="nzr-l" aria-describedby="nzr-d" />
+          <span aria-hidden="true" />
+        </label>
+      </div>
+    </>
+  )
+}
+
 function Devices() {
   const qc = useQueryClient()
   const toast = useToast()
@@ -181,8 +209,8 @@ export default function Settings({ onLogout }: { onLogout: () => void }) {
             </div>
           </section>
 
-          <section className="panel" aria-labelledby="dev-h">
-            <header><h2 id="dev-h">Signed-in devices</h2></header>
+          <section className="panel" aria-labelledby="sess-h">
+            <header><h2 id="sess-h">Signed-in devices</h2></header>
             <div className="body"><Devices /></div>
           </section>
 
@@ -220,10 +248,15 @@ export default function Settings({ onLogout }: { onLogout: () => void }) {
             </div>
           </section>
 
+          <section className="panel" aria-labelledby="alert-h">
+            <header><h2 id="alert-h">Alerts</h2></header>
+            <div className="body"><AlertPrefs /></div>
+          </section>
+
           <section className="panel" aria-labelledby="dev-h">
             <header><h2 id="dev-h">This device</h2></header>
             <div className="body">
-              <p className="small muted">Push notifications for followed items. Requires the HTTPS deployment.</p>
+              <p className="small muted">Push notifications for followed items and alerts. Requires the HTTPS deployment.</p>
               <button type="button" className="btn" onClick={enablePush}>Turn on push notifications</button>
               {pushState && <p className="small mt-2 mb-0" role="status">{pushState}</p>}
             </div>
