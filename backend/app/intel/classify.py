@@ -20,6 +20,14 @@ EXPLOITED = _P(r"exploited in (attacks|the wild|zero-day attacks)|exploited (as 
 ZERODAY = _P(r"\bzero[- ]day\b|\b0-?day\b")
 EMERGENCY = _P(r"emergency (directive|patch|update)|out-of-band|critical (flaw|vulnerability|bug)|patch now|urgent")
 SCANNING = _P(r"\bscan(s|ning)? for\b.*(vulnerab|CVE-|flaw|exploit)|exploitation attempts|honeypot")
+def _product_in(vuln: dict, title: str) -> bool:
+    """The headline names the vulnerable product (e.g. "SCKit abuses ScreenConnect ..." for a ScreenConnect CVE)."""
+    product = (vuln.get("product") or "").strip()
+    return len(product) >= 4 and re.search(rf"(?<![A-Za-z0-9]){re.escape(product)}(?![A-Za-z0-9])", title, re.I) is not None
+
+
+# Court, policing and regulatory follow-ups: news about an incident, not a live one
+LEGAL = _P(r"\b(sentenced|charged|indicted|pleads?|pleaded|convicted|acquitted|extradited|arrested|lawsuit|sues|sued|fined|settlement|court|trial)\b")
 MILLIONS = _P(r"\b\d+(\.\d+)? ?(million|m)\b (customers|users|people|patients|records|individuals|accounts)|\$\d+(\.\d+)? ?(million|billion)")
 BREACH = _P(r"\b(data breach|breach(es|ed)?|heist|hackers? (stole|steal|breach|hit)|ransomware gang|ransomware attack|ransomware attack|cyberattack|cyber attack|hacked|hack of|outage|disrupt(ed|ion)|extortion|leak(ed)? data|stolen data|compromised)\b")
 RANSOMWARE = _P(r"\bransomware\b")
@@ -47,8 +55,14 @@ def classify(
     source: dict,
     entity_types: dict[str, set[str]],
     vuln_facts: list[dict],
+    lead: str | None = None,
 ) -> Classification:
-    """``entity_types`` maps type -> set of values; ``vuln_facts`` are vulnerabilities rows for mentioned CVEs."""
+    """``entity_types`` maps type -> set of values; ``vuln_facts`` are vulnerabilities rows for mentioned CVEs.
+
+    ``lead`` is the feed's own summary. A CVE named in the headline or the summary is what the article is about;
+    one named only further down is a passing mention, which counts for less (a newsletter or guest diary that
+    mentions an exploited CVE in passing is not itself critical news). Without a lead, every CVE counts as the subject.
+    """
     c = Classification()
     full = f"{title}\n{text}"
     tags: set[str] = set()
@@ -94,31 +108,37 @@ def classify(
     # ------------------------------------------------------------ severity
     sev = 1
     reasons: list[str] = []
-    kev = [v for v in vuln_facts if v.get("kev")]
+    head = f"{title}\n{lead}".upper() if lead is not None else None
+    subject = [v for v in vuln_facts if head is None or v["cve_id"].upper() in head or _product_in(v, title)]
+    kev = [v for v in subject if v.get("kev")]
+    kev_passing = [v for v in vuln_facts if v.get("kev") and v not in kev]
     if kev:
         sev += 2
         reasons.append(f"{', '.join(v['cve_id'] for v in kev[:3])} listed in CISA KEV (confirmed exploitation)")
+    elif kev_passing and "exploited" not in tags:
+        sev += 1
+        reasons.append(f"Mentions {', '.join(v['cve_id'] for v in kev_passing[:3])}, listed in CISA KEV (not the article's main subject)")
     if "exploited" in tags and not kev:
         sev += 2 if "vulnerability" in tags else 1
         reasons.append("Reporting describes active exploitation" + (" of a vulnerability" if "vulnerability" in tags else ""))
-    if "exploitation-attempts" in tags and "exploited" not in tags and not kev:
+    if "exploitation-attempts" in tags and "exploited" not in tags and not kev and not kev_passing:
         sev += 1
         reasons.append("Scanning / exploitation attempts observed")
     if "zero-day" in tags:
         sev += 1
         reasons.append("Zero-day referenced")
-    crit = [v for v in vuln_facts if (v.get("cvss_score") or 0) >= 9.0]
+    crit = [v for v in subject if (v.get("cvss_score") or 0) >= 9.0]
     if crit:
         sev += 1
         reasons.append(f"CVSS {crit[0]['cvss_score']} ({crit[0]['cve_id']})")
-    hi_epss = [v for v in vuln_facts if (v.get("epss") or 0) >= 0.5]
+    hi_epss = [v for v in subject if (v.get("epss") or 0) >= 0.5]
     if hi_epss and not kev:
         sev += 1
         reasons.append(f"EPSS {hi_epss[0]['epss']:.0%} exploitation probability ({hi_epss[0]['cve_id']})")
     if EMERGENCY.search(title):
         sev += 1
         reasons.append("Emergency / out-of-band language in headline")
-    if "incident" in tags and ("ransomware" in tags or BREACH.search(title)):
+    if "incident" in tags and ("ransomware" in tags or BREACH.search(title)) and not LEGAL.search(title):
         sev += 1
         reasons.append("Reported incident affecting an organisation")
         if MILLIONS.search(title):
@@ -127,15 +147,16 @@ def classify(
     if source.get("authority", 2) >= 3 and source.get("kind") != "kev" and ("vulnerability" in tags or "exploited" in tags or "incident" in tags):
         sev += 1
         reasons.append(f"Official advisory ({source.get('name')})")
-    if "roundup" in tags:
-        sev -= 1
+    roundup = "roundup" in tags
+    if roundup:
+        sev = min(sev - 1, 2)  # context, never critical or Breaking on its own
         reasons.append("Roundup, weekly report, podcast or commentary format")
     if not reasons:
         reasons.append("General security reporting")
     c.severity = max(0, min(4, sev))
     c.reasons = reasons
 
-    if c.severity >= 3 and ("exploited" in tags or "zero-day" in tags or "incident" in tags or kev):
+    if c.severity >= 3 and not roundup and ("exploited" in tags or "zero-day" in tags or "incident" in tags or kev):
         secs.add("breaking")
     c.tags = sorted(tags)
     c.sections = [s for s in SECTIONS if s in secs]

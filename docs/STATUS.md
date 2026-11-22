@@ -52,6 +52,7 @@ _Last updated 2026-11-18._
 - ✅ Ransomware page (leak-site claims from ransomware.live: active groups, rising and falling, sectors, countries, NZ and Australia, recent claims linked to news) and claims panels on ransomware group profiles; alerts for new claims against New Zealand organisations (Settings → Alerts)
 - ✅ "Keep me signed in on this device" (180 days, renewed on use), signed-in devices list with remote sign-out; a server that cannot be reached no longer shows the sign-in form
 - ✅ Hudson Rock (InfoStealers) research feed and Threat Feeds weekly report; the weekly report is context only (see DECISIONS.md)
+- ✅ Same-story grouping across outlets; newsletters and passing CVE mentions kept off Breaking; daily briefing at 07:00 New Zealand time; Settings → Alerts shows when push is off on this device
 
 ## Known limitations
 - Sources are defined in code (`backend/app/ingest/sources.py`); the UI can enable/disable them but not add new ones.

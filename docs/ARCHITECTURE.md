@@ -65,7 +65,7 @@ Every 2 hours, around the clock (`TW_INGEST_INTERVAL_MINUTES`; feeds such as The
 1. Fetch with ETag/Last-Modified; cap 60 newest items/fetch, ignore items older than 60 days.
 2. Exact dedupe by canonical URL (tracking params stripped) and source GUID. Original URL kept.
 3. Extract entities, ensure CVE stubs exist, classify (sections, tags, severity + reasons).
-4. Near-duplicate clustering across *different* sources (title Jaccard + shared strong entities; template titles with disjoint entities are never merged). Cluster size drives confidence (`official` / `multi-source` / `corroborated` / `single-source`).
+4. Same-story clustering across *different* sources: near-duplicate headlines (title Jaccard + shared strong entities), or a shared distinctive name within 48 hours matched against the story's first report (see DECISIONS.md, 2026-11-22); template titles with disjoint entities are never merged. Cluster size drives confidence (`official` / `multi-source` / `corroborated` / `single-source`).
    Severity caps per source (`max_severity`) keep release notes, podcasts and statistical reports out of Breaking;
    titles with "weekly report", "week in review" and similar are tagged `roundup` (severity −1, never a development
    for a followed item, excluded from trend counts).
@@ -113,7 +113,7 @@ score = identifier hits (headline 0.6 / body 0.4; CVE entity 0.7 / 0.55)
 - Candidates go to AI adjudication when configured (“same specific event?”), otherwise to the user’s **review queue** (Link / Not relevant).
 - Exclusion terms veto. User rejections are remembered.
 
-When new evidence links: significance is assessed (AI if available; otherwise heuristics — new CVEs/IOCs/actors, first official advisory, exploitation, new independent source, or duplicate of a known cluster), a new **summary version** is written (old versions retained), the timeline records evidence and summary events, and notifications follow the watch’s preference (`important` / `all` / `digest` / `silent`) with dedupe key `watch:<id>:cluster:<cluster>` so duplicate coverage never re-notifies.
+When new evidence links: significance is assessed (AI if available; otherwise heuristics — new CVEs/IOCs/actors, first official advisory, exploitation, new independent source, or duplicate of a known cluster), a new **summary version** is written (old versions retained), the timeline records evidence and summary events, and notifications follow the watch’s preference (`important` / `all` / `digest` / `silent`) with dedupe key `watch:<id>:cluster:<cluster>` (plus `:important` for important updates) so duplicate coverage never re-notifies.
 
 ## AI safeguards
 

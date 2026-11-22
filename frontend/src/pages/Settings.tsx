@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { api } from '../api'
 import type { Source } from '../types'
@@ -27,7 +27,54 @@ function b64ToUint8(b64: string) {
 
 type Device = { id: number; device: string; signed_in_at: string; last_seen: string; expires_at: string; trusted: boolean; current: boolean }
 
-function AlertPrefs() {
+type PushStatus = 'checking' | 'on' | 'off' | 'blocked' | 'unsupported'
+
+/** Whether this browser is subscribed to push, and a way to subscribe it. Push is per device. */
+function usePush() {
+  const [status, setStatus] = useState<PushStatus>('checking')
+  const [message, setMessage] = useState<string | null>(null)
+  const check = useCallback(async () => {
+    try {
+      if (!('serviceWorker' in navigator) || !('PushManager' in window) || !('Notification' in window)) { setStatus('unsupported'); return }
+      if (Notification.permission === 'denied') { setStatus('blocked'); return }
+      const reg = await navigator.serviceWorker.getRegistration()
+      const sub = await reg?.pushManager.getSubscription()
+      setStatus(sub && Notification.permission === 'granted' ? 'on' : 'off')
+    } catch { setStatus('off') }
+  }, [])
+  useEffect(() => { void check() }, [check])
+  async function enable() {
+    try {
+      const k = await api.get<{ public_key: string | null; enabled: boolean }>('/api/push/key')
+      if (!k.enabled || !k.public_key) { setMessage('Push is not set up on this server yet. It needs the HTTPS deployment and VAPID keys (see the deployment guide).'); return }
+      if (!('serviceWorker' in navigator) || !('PushManager' in window)) { setMessage('This browser does not support push notifications.'); return }
+      const perm = await Notification.requestPermission()
+      if (perm !== 'granted') { setMessage('Notifications were not allowed. You can change this in the browser’s site settings.'); void check(); return }
+      const reg = await navigator.serviceWorker.ready
+      const sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64ToUint8(k.public_key) })
+      await api.post('/api/push/subscribe', sub.toJSON())
+      setMessage('Push notifications are on for this device.')
+      setStatus('on')
+    } catch (e) { setMessage(`Push could not be enabled: ${(e as Error).message}`) }
+  }
+  return { status, message, enable }
+}
+
+function PushNotice({ push }: { push: ReturnType<typeof usePush> }) {
+  if (push.status === 'on' || push.status === 'checking') return null
+  return (
+    <div className="notice push-notice mt-3" role="note">
+      <strong>Push is off on this device.</strong>{' '}
+      {push.status === 'blocked' ? 'Notifications are blocked for Threat Watch in this browser’s site settings, so alerts only appear under Notifications. Allow them there to get alerts on this device.'
+        : push.status === 'unsupported' ? 'This browser cannot receive push notifications, so alerts only appear under Notifications. On a phone, install Threat Watch to the home screen and open it from there.'
+        : 'Alerts only appear under Notifications until you turn it on.'}
+      {push.status === 'off' && <div className="mt-2"><button type="button" className="btn" onClick={push.enable}>Turn on push for this device</button></div>}
+      {push.message && <p className="small mt-2 mb-0" role="status">{push.message}</p>}
+    </div>
+  )
+}
+
+function AlertPrefs({ push }: { push: ReturnType<typeof usePush> }) {
   const qc = useQueryClient()
   const toast = useToast()
   const q = useQuery({ queryKey: ['alert-prefs'], queryFn: () => api.get<{ nz_ransom_claims: boolean }>('/api/alerts/prefs') })
@@ -51,6 +98,7 @@ function AlertPrefs() {
           <span aria-hidden="true" />
         </label>
       </div>
+      <PushNotice push={push} />
     </>
   )
 }
@@ -122,7 +170,7 @@ export default function Settings({ onLogout }: { onLogout: () => void }) {
   const toast = useToast()
   const [theme, setTheme] = useTheme()
   const startTour = useStartTour()
-  const [pushState, setPushState] = useState<string | null>(null)
+  const push = usePush()
   const me = useQuery({ queryKey: ['me'], queryFn: () => api.get<{ username: string }>('/api/auth/me') })
   const st = useQuery({ queryKey: ['status'], queryFn: () => api.get<Status>('/api/status'), refetchInterval: 30_000 })
   const src = useQuery({ queryKey: ['sources'], queryFn: () => api.get<Source[]>('/api/sources') })
@@ -137,20 +185,6 @@ export default function Settings({ onLogout }: { onLogout: () => void }) {
     try { await api.post('/api/auth/logout') } catch { /* already signed out */ }
     navigator.serviceWorker?.controller?.postMessage({ type: 'CLEAR_API_CACHE' })
     qc.clear(); onLogout()
-  }
-
-  async function enablePush() {
-    try {
-      const k = await api.get<{ public_key: string | null; enabled: boolean }>('/api/push/key')
-      if (!k.enabled || !k.public_key) { setPushState('Push is not set up on this server yet. It needs the HTTPS deployment and VAPID keys (see the deployment guide).'); return }
-      if (!('serviceWorker' in navigator) || !('PushManager' in window)) { setPushState('This browser does not support push notifications.'); return }
-      const perm = await Notification.requestPermission()
-      if (perm !== 'granted') { setPushState('Notifications were not allowed. You can change this in the browser’s site settings.'); return }
-      const reg = await navigator.serviceWorker.ready
-      const sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64ToUint8(k.public_key) })
-      await api.post('/api/push/subscribe', sub.toJSON())
-      setPushState('Push notifications are on for this device.')
-    } catch (e) { setPushState(`Push could not be enabled: ${(e as Error).message}`) }
   }
 
   const s = st.data
@@ -250,15 +284,17 @@ export default function Settings({ onLogout }: { onLogout: () => void }) {
 
           <section className="panel" aria-labelledby="alert-h">
             <header><h2 id="alert-h">Alerts</h2></header>
-            <div className="body"><AlertPrefs /></div>
+            <div className="body"><AlertPrefs push={push} /></div>
           </section>
 
           <section className="panel" aria-labelledby="dev-h">
             <header><h2 id="dev-h">This device</h2></header>
             <div className="body">
-              <p className="small muted">Push notifications for followed items and alerts. Requires the HTTPS deployment.</p>
-              <button type="button" className="btn" onClick={enablePush}>Turn on push notifications</button>
-              {pushState && <p className="small mt-2 mb-0" role="status">{pushState}</p>}
+              <p className="small muted">Push notifications for followed items and alerts. Each device is turned on separately.</p>
+              {push.status === 'on'
+                ? <p className="small mb-0">Push notifications are on for this device.</p>
+                : <button type="button" className="btn" onClick={push.enable}>Turn on push notifications</button>}
+              {push.message && push.status !== 'on' && <p className="small mt-2 mb-0" role="status">{push.message}</p>}
             </div>
           </section>
 

@@ -78,17 +78,11 @@ def cmd_sources(args) -> int:
 
 def cmd_reprocess(args) -> int:
     """Re-run extraction/classification/clustering for all articles (after rule changes)."""
-    from .db import tx
-    from .ingest.pipeline import process_article
+    from .ingest.pipeline import reprocess_all
 
     conn = connect()
     migrate(conn)
-    ids = [r[0] for r in conn.execute("SELECT id FROM articles ORDER BY id")]
-    conn.execute("UPDATE articles SET cluster_id=NULL")
-    for aid in ids:
-        with tx(conn):
-            process_article(conn, aid)
-    print(f"reprocessed {len(ids)} articles")
+    print(f"reprocessed {reprocess_all(conn)} articles")
     return 0
 
 

@@ -440,7 +440,7 @@ def _heuristic_assess(e: dict, terms: list[str], known_clusters: set[int], known
     scope = (about or ("" if broad else body)).lower()
     relevant = {x for x in candidates if x[1].lower() in scope}
     unrelated = len(candidates) - len(relevant)
-    if e["cluster_id"] in known_clusters and not relevant:
+    if e["cluster_id"] in known_clusters and not relevant and e["source_name"] in known_sources:
         return "duplicate", "Same story as a report already on record."
 
     reasons: list[str] = []
@@ -611,7 +611,9 @@ def _notify_for(conn, w: dict, new: list[dict], assess: dict[int, tuple[str, str
             continue
         if pref == "important" and sig != "important":
             continue
-        key = f"watch:{w['id']}:cluster:{e['cluster_id']}"
+        # at most one ping per story and level: wider coverage of the same story does not repeat it,
+        # but a later important development is not swallowed by an earlier routine one
+        key = f"watch:{w['id']}:cluster:{e['cluster_id']}" + (":important" if sig == "important" else "")
         notify(
             conn,
             kind="watch_important" if sig == "important" else "watch_update",

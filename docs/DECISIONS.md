@@ -3,6 +3,39 @@
 Consequential product and architecture decisions, newest first. Each records what was decided, why, and what it
 rules out.
 
+## 2026-11-22: Group one story across outlets; keep newsletters and passing mentions off Breaking
+
+**Context.** A review of the live data (450 articles) found three problems.
+- No two articles from different sources had been grouped in 14 days. Grouping needed near-identical headlines, and
+  outlets word the same story differently, so the Optimizely supply-chain attack showed as five cards from four sources.
+- 5 of 25 Breaking items in ten days were not breaking: three Risky Bulletin newsletters, a SANS guest diary on
+  honeypot workflow and a court ruling. Any KEV-listed CVE anywhere in the text added two severity levels, and a
+  roundup only lost one.
+- The 07:00 briefing and the 07:05 summary of held alerts ran at 07:00 and 07:05 UTC (20:00 and 20:05 in New
+  Zealand). A `CronTrigger` without its own timezone uses the host zone, not the scheduler's.
+
+**Decided.**
+- *Grouping.* Besides near-identical headlines, two reports are one story when, within 48 hours, their headlines
+  share a distinctive name: a word capitalised mid-headline that appears in no more than six headlines in a week
+  either side. Agencies, countries, months, days and big vendors never count. A loose match is only made against a
+  story's first report, so stories cannot chain into each other. A shared CVE, group or malware name plus some
+  headline overlap also groups. Re-scoring an article no longer regroups it.
+- *Severity.* A KEV-listed CVE raises severity by two only when it is the article's subject: named in the headline or
+  the feed's summary, or its product is named in the headline. A passing mention adds one and does not qualify for
+  Breaking. CVSS and EPSS count only for subject CVEs. Roundups (newsletters, podcasts, weekly reports) are capped
+  at medium and never reach Breaking. Court, policing and regulatory headlines are not counted as live incidents.
+- *Following.* A report in a story already on record is a duplicate only if its source is too; new outlets can add
+  new facts. Notifications are limited to one routine and one important ping per story.
+- Stored articles are re-scored and regrouped once when these rule versions change.
+
+**Checked against live data before release.** Grouping: 37 articles into 16 stories, no wrong merges found (the
+rejected drafts merged on words like "provider", "CISA" and "Russian"). Severity: 14 fewer Breaking items in 30 days,
+all newsletters, passing mentions or follow-ups; real exploitation stories (vCenter zero-day, SCKit and
+ScreenConnect, KEV additions) unchanged.
+
+**Ruled out.** Topic-level grouping (for example, every ScreenConnect story in a week): related but separate
+developments would be hidden behind one card.
+
 ## 2026-11-18: Ransomware leak-site claims from ransomware.live
 
 **Decision.** Add a Ransomware page and claims panels on ransomware group profiles, fed by ransomware.live's free

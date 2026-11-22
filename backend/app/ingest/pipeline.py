@@ -9,7 +9,7 @@ from datetime import timedelta
 from urllib.parse import quote
 
 from ..config import get_settings
-from ..db import iso, jdumps, jloads, now_iso, parse_iso, tx, utcnow
+from ..db import get_setting, iso, jdumps, jloads, now_iso, parse_iso, set_setting, tx, utcnow
 from ..intel import actions as soc_actions
 from ..intel import ai, classify, dedupe, entities
 from .fetcher import FetchError, fetch
@@ -136,7 +136,7 @@ def process_article(conn: sqlite3.Connection, article_id: int) -> None:
         f"SELECT * FROM vulnerabilities WHERE cve_id IN ({','.join('?' * len(cves))})", cves)] if cves else []
     src = {"name": a["source_name"], "kind": a["source_kind"], "authority": a["authority"], "region": a["source_region"],
            "default_sections": jloads(a["default_sections"])}
-    c = classify.classify(a["title"], body, src, etypes, vfacts)
+    c = classify.classify(a["title"], body, src, etypes, vfacts, lead=a["summary_text"] or "")
     cap = SEVERITY_CAPS.get(a["source_key"])
     if cap is not None and c.severity > cap:
         c.severity = cap
@@ -206,31 +206,86 @@ def clean_stored_text(conn: sqlite3.Connection) -> int:
     return changed
 
 
+def _name_rarity(conn: sqlite3.Connection, token: str, pub) -> int:
+    """How many headlines within a week either side contain this token."""
+    return conn.execute(
+        "SELECT COUNT(*) FROM articles WHERE published_at BETWEEN ? AND ? AND (' ' || title_tokens || ' ') LIKE ?",
+        (iso(pub - timedelta(days=7)), iso(pub + timedelta(days=7)), f"% {token} %")).fetchone()[0]
+
+
+def _same_story_by_name(conn: sqlite3.Connection, a, other, toks: set[str], other_toks: set[str], pub) -> bool:
+    """Differently worded headlines about one story: they share a distinctive name (see dedupe.shared_names).
+    Only matched against a story's first article and within 48 hours, so loosely related stories never chain."""
+    if other["cluster_id"] != other["id"]:
+        return False
+    opub = parse_iso(other["published_at"])
+    if not opub or abs((pub - opub).total_seconds()) > dedupe.NAME_WINDOW_HOURS * 3600:
+        return False
+    shared = toks & other_toks
+    names = dedupe.shared_names(a["title"], other["title"], shared)
+    if not names:
+        return False
+    rarity = [_name_rarity(conn, t, pub) for t in names]
+    if any(r > dedupe.NAME_RARITY for r in rarity):
+        names = [t for t, r in zip(names, rarity) if r <= dedupe.NAME_RARITY]
+        rarity = [r for r in rarity if r <= dedupe.NAME_RARITY]
+    return bool(names) and (len(shared) >= 2 or all(r <= dedupe.NAME_ALONE_RARITY for r in rarity))
+
+
 def assign_cluster(conn: sqlite3.Connection, article_id: int) -> None:
-    a = conn.execute("SELECT id, source_id, title_tokens, published_at, cluster_id FROM articles WHERE id=?", (article_id,)).fetchone()
+    a = conn.execute("SELECT id, source_id, title, title_tokens, published_at, cluster_id FROM articles WHERE id=?", (article_id,)).fetchone()
+    if a["cluster_id"] is not None:  # re-scoring keeps the story grouping; reprocess_all resets it to regroup
+        refresh_cluster(conn, a["cluster_id"])
+        return
     toks = set(a["title_tokens"].split())
     pub = parse_iso(a["published_at"]) or utcnow()
     lo, hi = iso(pub - timedelta(hours=72)), iso(pub + timedelta(hours=72))
     mine = {(t, v) for t, vs in article_entities(conn, article_id).items() if t in STRONG_TYPES for v in vs}
     best, best_j = None, 0.0
     for r in conn.execute(
-        "SELECT id, cluster_id, title_tokens FROM articles WHERE id<>? AND source_id<>? AND published_at BETWEEN ? AND ? ORDER BY id DESC LIMIT 600",
+        "SELECT id, cluster_id, title, title_tokens, published_at FROM articles WHERE id<>? AND source_id<>? AND published_at BETWEEN ? AND ? "
+        "AND cluster_id IS NOT NULL ORDER BY id DESC LIMIT 600",
         (article_id, a["source_id"], lo, hi),
     ):
         other = set(r["title_tokens"].split())
         j = dedupe.jaccard(toks, other)
-        if j < 0.5:
+        if j <= best_j or not (toks & other):
             continue
         theirs = {(t, v) for t, vs in article_entities(conn, r["id"]).items() if t in STRONG_TYPES for v in vs}
         my_cves = {x for x in mine if x[0] == "cve"}
         their_cves = {x for x in theirs if x[0] == "cve"}
         if (my_cves and their_cves and not my_cves & their_cves) or (mine and theirs and not mine & theirs):
             continue  # same template headline, different subject (e.g. "CISA Adds One KEV ...")
-        if dedupe.is_near_duplicate(toks, other, len(mine & theirs)) and j > best_j:
+        shared_strong = len(mine & theirs)
+        if (dedupe.is_near_duplicate(toks, other, shared_strong) or (shared_strong and j >= 0.2)
+                or _same_story_by_name(conn, a, r, toks, other, pub)):
             best, best_j = r, j
     cluster = (best["cluster_id"] or best["id"]) if best else article_id
     conn.execute("UPDATE articles SET cluster_id=? WHERE id=?", (cluster, article_id))
     refresh_cluster(conn, cluster)
+
+
+CLUSTER_RULES_VERSION = 2  # 2: same-story grouping by shared distinctive names
+CLASSIFY_RULES_VERSION = 2  # 2: roundups capped, passing KEV mentions no longer make an article critical
+
+
+def reprocess_all(conn: sqlite3.Connection) -> int:
+    """Re-run extraction, classification and story grouping for every stored article, oldest first."""
+    ids = [r[0] for r in conn.execute("SELECT id FROM articles ORDER BY published_at, id")]
+    conn.execute("UPDATE articles SET cluster_id=NULL")
+    for aid in ids:
+        with tx(conn):
+            process_article(conn, aid)
+    set_setting(conn, "cluster_rules_version", CLUSTER_RULES_VERSION)
+    set_setting(conn, "classify_rules_version", CLASSIFY_RULES_VERSION)
+    return len(ids)
+
+
+def reprocess_if_rules_changed(conn: sqlite3.Connection) -> int:
+    if (get_setting(conn, "cluster_rules_version") == CLUSTER_RULES_VERSION
+            and get_setting(conn, "classify_rules_version") == CLASSIFY_RULES_VERSION):
+        return 0
+    return reprocess_all(conn)
 
 
 def refresh_cluster(conn: sqlite3.Connection, cluster_id: int) -> None:

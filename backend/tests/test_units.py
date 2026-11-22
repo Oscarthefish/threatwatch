@@ -165,3 +165,18 @@ def test_quiet_hours_window_and_held_summary(conn, monkeypatch):
     monkeypatch.setenv("TW_QUIET_HOURS", "")
     config.get_settings.cache_clear()
     assert not notify.in_quiet_hours(datetime(2099, 1, 1, 23, 0, tzinfo=nz))
+
+
+def test_daily_jobs_run_on_local_time():
+    """The 07:00 briefing must fire at 07:00 in the configured zone, not 07:00 UTC (20:00 in NZ summer)."""
+    from datetime import datetime
+    from types import SimpleNamespace
+    from zoneinfo import ZoneInfo
+    from app.worker import daily_triggers
+    nz = ZoneInfo("Pacific/Auckland")
+    t = daily_triggers(SimpleNamespace(briefing_hour=7, briefing_minute=0, timezone="Pacific/Auckland"))
+    after = datetime(2026, 11, 21, 12, 0, tzinfo=nz)
+    assert t["briefing"].get_next_fire_time(None, after) == datetime(2026, 11, 22, 7, 0, tzinfo=nz)
+    assert t["digest"].get_next_fire_time(None, after) == datetime(2026, 11, 22, 7, 5, tzinfo=nz)
+    late = daily_triggers(SimpleNamespace(briefing_hour=6, briefing_minute=58, timezone="Pacific/Auckland"))
+    assert late["digest"].get_next_fire_time(None, after) == datetime(2026, 11, 22, 7, 3, tzinfo=nz)

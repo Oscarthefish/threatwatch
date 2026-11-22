@@ -104,6 +104,17 @@ def poll_requests() -> None:
         briefing_job()
 
 
+def daily_triggers(s) -> dict[str, CronTrigger]:
+    """Clock-time jobs in the configured local timezone. A CronTrigger without an explicit timezone
+    uses the host's zone (UTC in the container), not the scheduler's, which ran the 07:00 briefing at 20:00 NZ time."""
+    first = s.briefing_hour * 60 + s.briefing_minute + 5
+    return {
+        "briefing": CronTrigger(hour=s.briefing_hour, minute=s.briefing_minute, timezone=s.timezone),
+        "digest": CronTrigger(hour=(first // 60) % 24, minute=first % 60, timezone=s.timezone),
+        "maintenance": CronTrigger(hour=3, minute=30, timezone=s.timezone),
+    }
+
+
 def main() -> None:
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s", stream=sys.stdout)
     logging.getLogger("httpx").setLevel(logging.WARNING)
@@ -118,6 +129,9 @@ def main() -> None:
     n = reevaluate_all(conn)
     if n:
         log.info("re-checked %d followed items with updated matching rules", n)
+    n = pipeline.reprocess_if_rules_changed(conn)
+    if n:
+        log.info("re-scored and regrouped %d stored articles with updated rules", n)
     n = pipeline.clean_stored_text(conn)
     if n:
         log.info("decoded leftover HTML entities in %d stored articles", n)
@@ -131,9 +145,10 @@ def main() -> None:
 
     sched = BlockingScheduler(timezone=s.timezone, job_defaults={"coalesce": True, "max_instances": 1, "misfire_grace_time": 3600})
     sched.add_job(ingest_cycle, IntervalTrigger(minutes=s.ingest_interval_minutes), id="ingest")
-    sched.add_job(briefing_job, CronTrigger(hour=s.briefing_hour, minute=s.briefing_minute), id="briefing")
-    sched.add_job(digest_job, CronTrigger(hour=s.briefing_hour, minute=(s.briefing_minute + 5) % 60), id="digest")
-    sched.add_job(maintenance_job, CronTrigger(hour=3, minute=30), id="maintenance")
+    daily = daily_triggers(s)
+    sched.add_job(briefing_job, daily["briefing"], id="briefing")
+    sched.add_job(digest_job, daily["digest"], id="digest")
+    sched.add_job(maintenance_job, daily["maintenance"], id="maintenance")
     sched.add_job(poll_requests, IntervalTrigger(seconds=30), id="poll")
 
     def startup():
