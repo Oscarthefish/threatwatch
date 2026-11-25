@@ -53,6 +53,7 @@ The screenshots show real public reporting collected by the app; no personal dat
 - **What to do:** next steps for a SOC on each story, split into steps backed by the evidence (source, CVE record, CISA KEV) and general playbook advice.
 - **Further reading:** vendor advisories, CVE records, KEV entries and ATT&CK pages, taken only from stored data.
 - **Threat landscapes:** profiles of an organisation or sector assessed against the collected intelligence. Each threat comes with an explained priority, its evidence, ATT&CK techniques, monitoring and hunting guidance, hardening, incident readiness, response playbooks, a tabletop exercise and interview preparation. Profile details never leave the server.
+- **Reports library:** annual, quarterly and specialist threat reports kept by edition. Upload a PDF and Threat Watch extracts its text page by page (in a sandboxed process), so you can search every report and trace anything back to its page. A registry of 40 recurring report series is included as a starting point to verify.
 - **Search, Saved, Notifications, Glossary**, keyboard shortcuts (`?`), a guided tour, and light and dark themes.
 
 **Bookmark** saves one article. **Follow** keeps tracking an evolving subject.
@@ -84,6 +85,7 @@ copy to your Mac. Secrets live in `/etc/threatwatch/threatwatch.env` on the serv
 ## Documentation
 
 - [Threat Landscapes](docs/LANDSCAPES.md): methodology, evidence rules, data model, limitations and next steps
+- [Reports library](docs/REPORTS.md): architecture assessment, document pipeline, security, decisions needed and the remaining phases
 - [Architecture](docs/ARCHITECTURE.md): components, data model, matching and assessment rules, AI safeguards
 - [Design](docs/DESIGN.md): design system, tokens, components, chart rules and the redesign log
 - [Deployment](docs/DEPLOYMENT.md): server setup, deploy, updates, backup and restore

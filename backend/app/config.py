@@ -42,6 +42,12 @@ class Settings(BaseSettings):
     ingest_max_items_per_fetch: int = 60
     retention_days: int = 365  # articles older than this (and not saved/linked) are pruned
 
+    # Intelligence reports library: uploaded documents live in <data_dir>/reports
+    reports_max_mb: int = 50
+    reports_max_pages: int = 600  # pages beyond this are not extracted; the report is flagged for review
+    reports_child_mem_mb: int = 224  # address-space cap for the PDF text extractor (worker container is 256 MB)
+    reports_timeout_seconds: int = 180
+
     # AI (optional; app works without it)
     ai_provider: str = "anthropic"  # "anthropic" or "none"
     anthropic_api_key: SecretStr | None = Field(default=None, validation_alias="ANTHROPIC_API_KEY")

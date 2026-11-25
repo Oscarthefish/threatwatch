@@ -54,13 +54,20 @@ _Last updated 2026-11-25._
 - ✅ Hudson Rock (InfoStealers) research feed and Threat Feeds weekly report; the weekly report is context only (see DECISIONS.md)
 - ✅ Same-story grouping across outlets; newsletters and passing CVE mentions kept off Breaking; daily briefing at 07:00 New Zealand time; Settings → Alerts shows when push is off on this device
 
-## Phase 6: Threat Landscapes (branch feature/threat-landscapes, not deployed)
+## Phase 6: Threat Landscapes (deployed 2026-11-25)
 - 🟡 Organisation and industry profiles with provenance-tagged facts; deterministic, explainable assessments from collected reporting, CISA KEV and leak-site claims; snapshots with change summaries
 - 🟡 MITRE ATT&CK Enterprise v20.1 in full (techniques, mitigations, detection strategies, relationships, revoked IDs); matrix, technique detail, coverage tracking, Navigator layer export
 - 🟡 Monitoring guidance with conceptual queries, hunts with recorded outcomes, hardening (CIS v8.1, CSF 2.0, ATT&CK mitigations), telemetry gaps, action tracking
 - 🟡 Incident readiness (scored only from your answers), versioned playbook drafts, a staged tabletop exercise, interview preparation with Markdown briefing
 - 🟡 Fisher & Paykel Healthcare case study (`app.cli case-study`)
 - Verified locally on a copy of the server data: 115 backend tests; 0 axe violations and no overflow on 53 page views (390 and 1366 px, light and dark). Details and next steps: docs/LANDSCAPES.md
+
+## Phase 7: Intelligence Reports Library (reports roadmap phase 1 of 7)
+- ✅ Report series registry (40 seeded series, all unverified and disabled until checked), reports kept by edition
+- ✅ PDF upload with size cap, signature check, SHA-256 deduplication; documents stored by hash in the data volume
+- ✅ Text extraction per page in a resource-limited child process; PDF bookmarks as sections; processing history; re-processing keeps your edits
+- ✅ Library with full-text search, status filters, bookmarks; report page with provenance-marked details, contents and page text viewer
+- Verified: 133 backend tests; 0 axe violations and no overflow at 390 and 1366 px, light and dark. Plan, decisions and limitations: docs/REPORTS.md
 
 ## Known limitations
 - Sources are defined in code (`backend/app/ingest/sources.py`); the UI can enable/disable them but not add new ones.

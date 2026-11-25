@@ -1071,3 +1071,53 @@ details.ls-details > summary .ls-finding-title::after { content: none; }
 .ls-evidence a, .ls-vulns a, .ls-history a { text-decoration: underline; text-underline-offset: 2px; }
 ul.chips { list-style: none; margin: 0; padding: 0; }
 .ls-fact-list li > a { display: inline-flex; align-items: center; min-height: 32px; align-self: flex-start; }
+
+/* --- Reports library --- */
+.rp-status { display: inline-flex; align-items: center; padding: 2px var(--s-2); border-radius: var(--r-sm); font-size: var(--t-xs); font-weight: var(--w-semibold);
+  white-space: nowrap; border: 1px solid var(--border-strong); color: var(--muted); }
+.rp-status.good { color: var(--ok); border-color: color-mix(in srgb, var(--ok) 45%, var(--border)); }
+.rp-status.warn { color: var(--text); border-color: var(--warn); background: color-mix(in srgb, var(--warn) 14%, transparent); }
+.rp-status.bad { color: var(--danger); border-color: color-mix(in srgb, var(--danger) 45%, var(--border)); }
+.rp-bad { color: var(--danger); }
+.rp-search { display: flex; gap: var(--s-2); }
+.rp-search .input { flex: 1; min-width: 0; }
+.rp-check { display: inline-flex; align-items: center; gap: var(--s-2); min-height: var(--control-h); font-size: var(--t-sm); cursor: pointer; }
+.rp-check input { width: 20px; height: 20px; accent-color: var(--primary); }
+.rp-file { padding: var(--s-2); height: auto; }
+.rp-list { list-style: none; margin: 0 0 var(--s-4); padding: 0; display: grid; gap: var(--s-3); }
+.rp-card { display: block; background: var(--surface); border: var(--hairline); border-radius: var(--r-md); padding: var(--s-3) var(--s-4); color: var(--text); min-height: 44px; }
+.rp-card:hover { border-color: var(--border-strong); text-decoration: none; }
+.rp-card .row { gap: var(--s-3); }
+.rp-card-title { font-size: var(--t-md); margin: 0 0 var(--s-1); overflow-wrap: anywhere; }
+.rp-match { color: var(--primary); margin-top: var(--s-1); }
+.rp-h { font-size: var(--t-md); margin: 0 0 var(--s-2); }
+.rp-actions { gap: var(--s-2); margin-top: var(--s-3); }
+.rp-prov { display: inline-block; font-size: var(--t-xs); color: var(--muted); border: var(--hairline); border-radius: var(--r-sm); padding: 0 6px; margin-left: var(--s-1); white-space: nowrap; }
+.rp-gap { margin-top: var(--s-3); }
+.rp-plain { list-style: none; margin: 0; padding: 0; }
+.rp-plain li { padding: var(--s-1) 0; }
+.rp-plain a, .kv dd a { text-decoration: underline; text-underline-offset: 2px; }
+.rp-grid { display: grid; gap: var(--s-3); grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr)); }
+.rp-toc { list-style: none; margin: 0; padding: 0; }
+.rp-toc-item { display: flex; justify-content: space-between; gap: var(--s-3); width: 100%; min-height: 44px; padding: var(--s-2); background: none; border: 0;
+  border-bottom: var(--hairline); text-align: left; color: var(--text); font: inherit; cursor: pointer; }
+.rp-toc-item:hover { background: var(--surface-2); }
+.rp-pages { display: grid; gap: var(--s-4); }
+@media (min-width: 1000px) { .rp-pages { grid-template-columns: minmax(240px, 300px) 1fr; align-items: start; } .rp-find { position: sticky; top: var(--s-4); } }
+.rp-hits { list-style: none; margin: 0; padding: 0; max-height: 60vh; overflow-y: auto; }
+.rp-hit { display: flex; flex-direction: column; gap: 2px; width: 100%; min-height: 44px; padding: var(--s-2); background: none; border: 0; border-bottom: var(--hairline);
+  text-align: left; color: var(--text); font: inherit; cursor: pointer; }
+.rp-hit:hover, .rp-hit.on { background: var(--surface-2); }
+.rp-hit-page { color: var(--muted); font-weight: var(--w-semibold); }
+.rp-pager { gap: var(--s-2); margin-bottom: var(--s-2); }
+.rp-pager .row { gap: var(--s-2); }
+.rp-goto { width: 64px; min-height: 32px; text-align: center; }
+.rp-text { white-space: pre-wrap; overflow-wrap: anywhere; font-size: var(--t-sm); line-height: 1.6; max-width: var(--measure); margin: var(--s-3) 0; }
+.rp-section { margin-top: var(--s-5); }
+.rp-series { list-style: none; margin: 0; padding: 0; border-top: var(--hairline); }
+.rp-series-row { display: flex; gap: var(--s-3); padding: var(--s-3) 0; border-bottom: var(--hairline); align-items: flex-start; flex-wrap: wrap; }
+.rp-series-row .grow { min-width: min(100%, 260px); }
+.rp-series-actions { gap: var(--s-2); }
+.rp-series-row a { text-decoration: underline; text-underline-offset: 2px; }
+@media (max-width: 599px) { .rp-selects { display: grid; grid-template-columns: 1fr 1fr; } .rp-selects label { max-width: none; } }
+.filters .rp-check { margin-top: calc(-1 * var(--s-2)); }

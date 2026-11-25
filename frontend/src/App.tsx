@@ -25,6 +25,9 @@ import GroupPage from './pages/Group'
 import Glossary from './pages/Glossary'
 import Landscapes from './pages/Landscapes'
 import Landscape from './pages/Landscape'
+import Reports from './pages/Reports'
+import Report from './pages/Report'
+import ReportSources from './pages/ReportSources'
 
 type AuthState = 'checking' | 'in' | 'out' | 'unreachable'
 
@@ -73,6 +76,9 @@ export default function App() {
         <Route path="/ransomware" element={<Ransomware />} />
         <Route path="/landscapes" element={<Landscapes />} />
         <Route path="/landscapes/:id" element={<Landscape />} />
+        <Route path="/reports" element={<Reports />} />
+        <Route path="/reports/series" element={<ReportSources />} />
+        <Route path="/reports/:id" element={<Report />} />
         <Route path="/glossary" element={<Glossary />} />
         <Route path="/group/:kind/:name" element={<GroupPage />} />
         <Route path="/vuln/:cve" element={<VulnDetail />} />

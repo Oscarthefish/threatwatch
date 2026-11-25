@@ -6,6 +6,7 @@ Jobs:
   * digest       daily, five minutes after the briefing
   * maintenance  daily retention pruning + SQLite optimise
   * on-demand    polls every minute for "refresh now" requests made from the UI
+  * reports      every 20 s, extracts text from queued report documents in a resource-limited child process
 """
 from __future__ import annotations
 
@@ -82,6 +83,18 @@ def maintenance_job() -> None:
         conn.close()
 
 
+def reports_job() -> None:
+    """Extract text from queued report documents. Its own job, so a long extraction never delays the heartbeat."""
+    from .reports import process
+    conn = connect()
+    try:
+        process.process_queued(conn)
+    except Exception:
+        log.exception("report processing failed")
+    finally:
+        conn.close()
+
+
 def poll_requests() -> None:
     conn = connect()
     try:
@@ -139,6 +152,12 @@ def main() -> None:
     n = reassess_all(conn)
     if n:
         log.info("re-assessed %d linked reports with stricter relevance rules", n)
+    from .reports import process as reports, registry
+    registry.sync(conn)
+    n = reports.recover_stale(conn)
+    if n:
+        log.info("re-queued %d report(s) interrupted mid-extraction", n)
+    reports.clean_incoming()
     has_briefing = conn.execute("SELECT 1 FROM briefings LIMIT 1").fetchone()
     conn.close()
     log.info("worker starting; AI %s; interval %d min", "enabled" if s.ai_enabled else "disabled", s.ingest_interval_minutes)
@@ -150,6 +169,7 @@ def main() -> None:
     sched.add_job(digest_job, daily["digest"], id="digest")
     sched.add_job(maintenance_job, daily["maintenance"], id="maintenance")
     sched.add_job(poll_requests, IntervalTrigger(seconds=30), id="poll")
+    sched.add_job(reports_job, IntervalTrigger(seconds=20), id="reports")
 
     def startup():
         ingest_cycle()

@@ -126,3 +126,9 @@ feed, stops working (the source will show errors on Settings).
 - **Evidence rules:** tuned by dry runs on live data. Headline and summary only; country only from the headline or a national agency; CISA vulnerability advisories and court follow-ups are not threat activity; negated statements are ignored.
 - **ATT&CK:** moved from mitre/cti to mitre-attack/attack-stix-data, which carries the release version (v20.1 renamed several defence-evasion IDs; revoked IDs now resolve).
 - **Consequences:** fewer, more defensible findings. Sector matching is keyword-based and can miss reporting. Optional AI drafting would need a per-profile opt-in.
+
+## 2026-11-25: Reports library stores documents privately and parses them in a sandboxed child process
+- **Context:** the brief asks for a persistent library of vendor and government threat reports with page-level evidence, on a 1 GB server, without a new stack.
+- **Decision:** `pypdf` (pure Python) reads the text layer in a child process with no environment, no file writes, CPU and address-space limits and a timeout. Uploads are a raw request body, streamed with a size cap, so no multipart parser is added. Documents are stored by SHA-256 in the data volume; duplicates are refused. Report series live in their own registry rather than the news `sources` table, because editions are kept forever and discovery is per series. Seeded series start unverified and disabled.
+- **Not done:** OCR (too heavy for the server), automatic discovery (Phase 4), and finding extraction (Phase 2, which needs a decision on AI use; see docs/REPORTS.md section 3).
+- **Consequences:** image-only PDFs are flagged for review rather than read. Extraction is reproducible (extractor name and version recorded per run) and repeatable without losing manual metadata.

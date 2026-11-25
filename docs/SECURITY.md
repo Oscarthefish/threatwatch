@@ -14,6 +14,7 @@
 | Data file exposure | DB created mode 600 inside a 700 directory owned by the container user; backups mode 600 in a root-only 700 directory. |
 | Container escape / lateral movement | Non-root UID 10001, read-only root FS, `cap_drop: ALL`, `no-new-privileges`, pids limit, memory/CPU limits, tmpfs `/tmp`, dedicated bridge network, no Docker socket mounted. |
 | Network exposure | Only `127.0.0.1:8080` published; no DB or Docker API ports; reached via Tailscale Serve (WireGuard + HTTPS). Host header allow-list via `TW_TRUSTED_HOSTS`. |
+| Malicious or oversized report documents | Upload size capped while streaming (50 MB); PDF signature required; stored by SHA-256 name (mode 600) so the uploaded name is never a path; parsed by `pypdf` in a child process with an empty environment, no file writes, CPU and memory limits and a timeout; JavaScript, forms, attachments and links in PDFs ignored; extracted text rendered as plain text only; downloads always `attachment` with `nosniff`. Details: docs/REPORTS.md. |
 | Supply chain | Pinned Python requirements and `package-lock.json`; slim official base images; frontend has 3 runtime deps. Rebuild regularly for security patches. |
 | Information leakage to sources | `Referrer-Policy: no-referrer`; outbound links use `rel="noopener noreferrer"`; the app never loads third-party resources in the browser. |
 

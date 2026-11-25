@@ -114,6 +114,22 @@ def cmd_case_study(args) -> int:
     return 0
 
 
+def cmd_process_reports(args) -> int:
+    from .reports import process, registry
+    conn = connect()
+    migrate(conn)
+    registry.sync(conn)
+    process.recover_stale(conn)
+    n = 0
+    while True:
+        done = process.process_queued(conn, limit=5)
+        n += done
+        if not done:
+            break
+    print(f"Processed {n} queued report(s)")
+    return 0
+
+
 def cmd_backup(args) -> int:
     import os
     from pathlib import Path
@@ -140,6 +156,7 @@ def main(argv=None) -> int:
     sub.add_parser("vapid").set_defaults(fn=cmd_vapid)
     sub.add_parser("reprocess").set_defaults(fn=cmd_reprocess)
     sub.add_parser("case-study").set_defaults(fn=cmd_case_study)
+    sub.add_parser("process-reports").set_defaults(fn=cmd_process_reports)
     sb = sub.add_parser("backup"); sb.add_argument("dest"); sb.set_defaults(fn=cmd_backup)
     args = p.parse_args(argv)
     return args.fn(args)

@@ -11,3 +11,4 @@ argon2-cffi==25.1.0
 APScheduler==3.11.3
 anthropic==2.6.0
 pywebpush==2.5.0
+pypdf==7.0.1
