@@ -254,7 +254,7 @@ a.card:hover { text-decoration: none; border-color: var(--border-strong); }
 .seg { display: inline-flex; border: 1px solid var(--border-strong); border-radius: var(--r-sm); overflow: hidden; }
 .seg button { border: 0; background: none; min-height: 32px; padding: 0 var(--s-3); font-size: var(--t-xs); font-weight: var(--w-semibold); color: var(--muted); cursor: pointer; position: relative; }
 .seg button::before { content: ""; position: absolute; inset: -6px 0; }
-.seg button.on, .seg button[aria-pressed="true"] { background: var(--primary-soft); color: var(--primary); }
+.seg button.on, .seg button[aria-pressed="true"], .seg button[aria-checked="true"] { background: var(--primary-soft); color: var(--primary); }
 
 /* --- Sheet / dialog (the only elevated surfaces besides toast and popover) --- */
 .sheet-backdrop { position: fixed; inset: 0; background: var(--overlay); z-index: 50; display: flex; align-items: flex-end; justify-content: center;
@@ -265,6 +265,10 @@ a.card:hover { text-decoration: none; border-color: var(--border-strong); }
 .sheet-head { display: flex; align-items: center; justify-content: space-between; gap: var(--s-2); margin-bottom: var(--s-3); }
 .sheet-head h2 { margin: 0; font-size: var(--t-lg); }
 .sheet-actions { display: flex; gap: var(--s-2); justify-content: flex-end; margin-top: var(--s-4); flex-wrap: wrap; }
+/* Keeps a long form's submit button in view: sticks to the panel's bottom edge and covers its bottom padding. */
+.sheet-sticky { position: sticky; bottom: calc(-1 * (var(--s-4) + env(safe-area-inset-bottom))); z-index: 1; background: var(--surface);
+  margin: var(--s-2) calc(-1 * var(--s-4)) calc(-1 * (var(--s-4) + env(safe-area-inset-bottom)));
+  padding: var(--s-3) var(--s-4) calc(var(--s-3) + env(safe-area-inset-bottom)); border-top: 1px solid var(--border); }
 @media (min-width: 900px) { .sheet-backdrop { align-items: center; } .sheet-panel { border-radius: var(--r-md); } }
 @keyframes fade { from { opacity: 0; } }
 @keyframes rise { from { transform: translateY(16px); opacity: .6; } }

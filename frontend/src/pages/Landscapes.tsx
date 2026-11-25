@@ -45,7 +45,7 @@ export function ProfileForm({ initial, onDone, submitLabel }: {
         <legend className="field-label">Profile type</legend>
         <div className="seg" role="radiogroup">
           {(['organisation', 'industry'] as const).map((k) => (
-            <button key={k} type="button" role="radio" aria-checked={kind === k} aria-pressed={kind === k} onClick={() => setKind(k)}>
+            <button key={k} type="button" role="radio" aria-checked={kind === k} onClick={() => setKind(k)}>
               {k === 'organisation' ? 'Organisation' : 'Industry or sector'}</button>))}
         </div>
       </fieldset>
@@ -78,7 +78,10 @@ export function ProfileForm({ initial, onDone, submitLabel }: {
         <textarea className="input" rows={3} maxLength={4000} value={description} onChange={(e) => setDescription(e.target.value)} />
       </Field>
       {error && <p className="field-error" role="alert">{error}</p>}
-      <div><button type="submit" className="btn primary" aria-busy={save.isPending}>{submitLabel}</button></div>
+      <div className="sheet-actions sheet-sticky">
+        <button type="button" className="btn" onClick={() => onDone()}>Cancel</button>
+        <button type="submit" className="btn primary" aria-busy={save.isPending}>{submitLabel}</button>
+      </div>
     </form>
   )
 }
