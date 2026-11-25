@@ -118,3 +118,11 @@ time series for the weekly numbers, and a Hudson Rock-specific UI.
 **Revisit if** the research feed turns mostly promotional (partnership announcements and vendor rankings already
 appear at low severity), or the weekly report's endpoint, which is a standard WordPress query rather than an advertised
 feed, stops working (the source will show errors on Settings).
+
+
+## 2026-11-25: Threat Landscapes are deterministic and keep profile data on the server
+- **Context:** organisation profiles can hold sensitive internal details (technology, telemetry, control gaps). The brief asks for evidence-backed analysis, not generic AI reports.
+- **Decision:** assessments are rule-based over data Threat Watch already holds. Every priority lists its factors, and every fact has a provenance. No AI provider calls, web lookups or scanning use profile data. Readiness scores come only from the analyst's answers. Playbooks leave organisation-specific contacts, approvals and obligations blank.
+- **Evidence rules:** tuned by dry runs on live data. Headline and summary only; country only from the headline or a national agency; CISA vulnerability advisories and court follow-ups are not threat activity; negated statements are ignored.
+- **ATT&CK:** moved from mitre/cti to mitre-attack/attack-stix-data, which carries the release version (v20.1 renamed several defence-evasion IDs; revoked IDs now resolve).
+- **Consequences:** fewer, more defensible findings. Sector matching is keyword-based and can miss reporting. Optional AI drafting would need a per-profile opt-in.

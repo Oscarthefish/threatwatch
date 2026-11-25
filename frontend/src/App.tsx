@@ -23,6 +23,8 @@ import Trends from './pages/Trends'
 import Ransomware from './pages/Ransomware'
 import GroupPage from './pages/Group'
 import Glossary from './pages/Glossary'
+import Landscapes from './pages/Landscapes'
+import Landscape from './pages/Landscape'
 
 type AuthState = 'checking' | 'in' | 'out' | 'unreachable'
 
@@ -69,6 +71,8 @@ export default function App() {
         <Route path="/vulns" element={<Vulns />} />
         <Route path="/trends" element={<Trends />} />
         <Route path="/ransomware" element={<Ransomware />} />
+        <Route path="/landscapes" element={<Landscapes />} />
+        <Route path="/landscapes/:id" element={<Landscape />} />
         <Route path="/glossary" element={<Glossary />} />
         <Route path="/group/:kind/:name" element={<GroupPage />} />
         <Route path="/vuln/:cve" element={<VulnDetail />} />

@@ -105,6 +105,15 @@ def cmd_vapid(args) -> int:
     return 0
 
 
+def cmd_case_study(args) -> int:
+    from .landscape import casestudy
+    conn = connect()
+    migrate(conn)
+    pid = casestudy.seed(conn)
+    print(f"Case study profile {pid}: Fisher & Paykel Healthcare (public facts from the company statement of 22 October 2026)")
+    return 0
+
+
 def cmd_backup(args) -> int:
     import os
     from pathlib import Path
@@ -130,6 +139,7 @@ def main(argv=None) -> int:
     sub.add_parser("sources").set_defaults(fn=cmd_sources)
     sub.add_parser("vapid").set_defaults(fn=cmd_vapid)
     sub.add_parser("reprocess").set_defaults(fn=cmd_reprocess)
+    sub.add_parser("case-study").set_defaults(fn=cmd_case_study)
     sb = sub.add_parser("backup"); sb.add_argument("dest"); sb.set_defaults(fn=cmd_backup)
     args = p.parse_args(argv)
     return args.fn(args)

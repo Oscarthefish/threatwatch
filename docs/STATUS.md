@@ -2,7 +2,7 @@
 
 Legend: ✅ implemented and verified · 🟡 implemented, not yet verified in its real environment · ⛔ not done
 
-_Last updated 2026-11-18._
+_Last updated 2026-11-25._
 
 ## Phase 1 — Foundation
 - ✅ Git repository, structure, pinned dependencies
@@ -53,6 +53,14 @@ _Last updated 2026-11-18._
 - ✅ "Keep me signed in on this device" (180 days, renewed on use), signed-in devices list with remote sign-out; a server that cannot be reached no longer shows the sign-in form
 - ✅ Hudson Rock (InfoStealers) research feed and Threat Feeds weekly report; the weekly report is context only (see DECISIONS.md)
 - ✅ Same-story grouping across outlets; newsletters and passing CVE mentions kept off Breaking; daily briefing at 07:00 New Zealand time; Settings → Alerts shows when push is off on this device
+
+## Phase 6: Threat Landscapes (branch feature/threat-landscapes, not deployed)
+- 🟡 Organisation and industry profiles with provenance-tagged facts; deterministic, explainable assessments from collected reporting, CISA KEV and leak-site claims; snapshots with change summaries
+- 🟡 MITRE ATT&CK Enterprise v20.1 in full (techniques, mitigations, detection strategies, relationships, revoked IDs); matrix, technique detail, coverage tracking, Navigator layer export
+- 🟡 Monitoring guidance with conceptual queries, hunts with recorded outcomes, hardening (CIS v8.1, CSF 2.0, ATT&CK mitigations), telemetry gaps, action tracking
+- 🟡 Incident readiness (scored only from your answers), versioned playbook drafts, a staged tabletop exercise, interview preparation with Markdown briefing
+- 🟡 Fisher & Paykel Healthcare case study (`app.cli case-study`)
+- Verified locally on a copy of the server data: 115 backend tests; 0 axe violations and no overflow on 53 page views (390 and 1366 px, light and dark). Details and next steps: docs/LANDSCAPES.md
 
 ## Known limitations
 - Sources are defined in code (`backend/app/ingest/sources.py`); the UI can enable/disable them but not add new ones.

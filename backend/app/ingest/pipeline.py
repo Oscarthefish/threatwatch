@@ -459,7 +459,7 @@ def run_ingest(conn: sqlite3.Connection, force: bool = False, only: list[str] | 
                 from .attack import ingest_attack
                 n, etag, lm = ingest_attack(conn, src)
                 _mark(conn, src["id"], True, "ok" if n else "not-modified", items=n, etag=etag, last_modified=lm)
-                report["sources"][src["key"]] = f"{n} ATT&CK groups and software" if n else "not modified"
+                report["sources"][src["key"]] = f"{n} ATT&CK objects" if n else "not modified"
             elif src["kind"] == "ransom_claims":
                 from .ransom import ingest_claims
                 n, detail = ingest_claims(conn, src)
