@@ -138,8 +138,16 @@ def structured(
     max_tokens: int = 4000,
     use_cache: bool = True,
     tier: str = "deep",
+    effort: str | None = None,
+    timeout: float | None = None,
+    own_budget: bool = False,
+    usage_out: dict | None = None,
 ) -> dict:
-    """Run one schema-constrained request. Raises AIUnavailable when disabled, over budget or failing."""
+    """Run one schema-constrained request. Raises AIUnavailable when disabled, over budget or failing.
+
+    own_budget: the caller enforces its own budget and records its own spend (report extraction), so the daily news
+    budget, the per-run request cap and the daily usage counter are left alone. usage_out receives model, tokens and cost.
+    """
     global _run_requests
     s = get_settings()
     if not s.ai_enabled:
@@ -151,12 +159,14 @@ def structured(
         hit = cached(conn, kind, h)
         if hit is not None:
             return hit
-    if budget_status(conn)["remaining_usd"] <= 0:
-        raise AIUnavailable("daily AI budget exhausted")
-    with _run_lock:
-        if _run_requests >= s.ai_max_requests_per_run:
-            raise AIUnavailable("per-run AI request cap reached")
-        _run_requests += 1
+    if not own_budget:
+        if budget_status(conn)["remaining_usd"] <= 0:
+            raise AIUnavailable("daily AI budget exhausted")
+        with _run_lock:
+            if _run_requests >= s.ai_max_requests_per_run:
+                raise AIUnavailable("per-run AI request cap reached")
+            _run_requests += 1
+    record = (lambda *a, **k: None) if own_budget else _record_usage
 
     import anthropic
 
@@ -165,8 +175,10 @@ def structured(
         max_tokens=max_tokens,
         system=full_system,
         messages=[{"role": "user", "content": user}],
-        output_config={"effort": s.ai_effort, "format": {"type": "json_schema", "schema": schema}},
+        output_config={"effort": effort or s.ai_effort, "format": {"type": "json_schema", "schema": schema}},
     )
+    if timeout:
+        params["timeout"] = timeout
     try:
         client = _client()
         if s.ai_server_fallback and not model.startswith(NO_SERVER_FALLBACK):
@@ -174,18 +186,18 @@ def structured(
         else:
             resp = client.messages.create(**params)
     except anthropic.BadRequestError as e:
-        _record_usage(conn, 0, 0, 0.0, failed=True)
+        record(conn, 0, 0, 0.0, failed=True)
         log.warning("AI bad request (kind=%s): %s", kind, getattr(e, "message", str(e))[:300])
         raise AIUnavailable("AI request rejected") from e
     except (anthropic.AuthenticationError, anthropic.PermissionDeniedError) as e:
-        _record_usage(conn, 0, 0, 0.0, failed=True)
+        record(conn, 0, 0, 0.0, failed=True)
         log.error("AI authentication/permission failure; check ANTHROPIC_API_KEY")
         raise AIUnavailable("AI authentication failed") from e
     except anthropic.RateLimitError as e:
-        _record_usage(conn, 0, 0, 0.0, failed=True)
+        record(conn, 0, 0, 0.0, failed=True)
         raise AIUnavailable("AI rate limited") from e
     except (anthropic.APIStatusError, anthropic.APIConnectionError) as e:
-        _record_usage(conn, 0, 0, 0.0, failed=True)
+        record(conn, 0, 0, 0.0, failed=True)
         log.warning("AI request failed (kind=%s): %s", kind, type(e).__name__)
         raise AIUnavailable("AI request failed") from e
 
@@ -193,21 +205,23 @@ def structured(
     tin = (getattr(usage, "input_tokens", 0) or 0) + (getattr(usage, "cache_creation_input_tokens", 0) or 0) + (getattr(usage, "cache_read_input_tokens", 0) or 0)
     tout = getattr(usage, "output_tokens", 0) or 0
     cost = cost_usd(model, tin, tout)
+    if usage_out is not None:  # set before the checks below: a refused or truncated reply still costs money
+        usage_out.update(model=getattr(resp, "model", model), input_tokens=tin, output_tokens=tout, cost_usd=cost)
 
     if resp.stop_reason == "refusal":
-        _record_usage(conn, tin, tout, cost, failed=True)
+        record(conn, tin, tout, cost, failed=True)
         raise AIUnavailable("model declined the request")
     if resp.stop_reason == "max_tokens":
-        _record_usage(conn, tin, tout, cost, failed=True)
+        record(conn, tin, tout, cost, failed=True)
         raise AIUnavailable("model output truncated")
     text = next((b.text for b in resp.content if getattr(b, "type", "") == "text"), None)
     try:
         out = json.loads(text or "")
     except ValueError as e:
-        _record_usage(conn, tin, tout, cost, failed=True)
+        record(conn, tin, tout, cost, failed=True)
         raise AIUnavailable("model returned invalid JSON") from e
 
-    _record_usage(conn, tin, tout, cost)
+    record(conn, tin, tout, cost)
     conn.execute(
         """INSERT INTO ai_outputs(kind, subject_type, subject_id, input_hash, model, output_json, input_tokens, output_tokens, cost_usd, created_at)
            VALUES(?,?,?,?,?,?,?,?,?,?) ON CONFLICT(kind, input_hash) DO UPDATE SET output_json=excluded.output_json, created_at=excluded.created_at""",

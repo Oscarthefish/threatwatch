@@ -87,3 +87,57 @@ export async function uploadReport(file: File, reportId?: number): Promise<{ id:
   }
   return res.json()
 }
+
+export interface Finding {
+  id: number; report_id: number; page_no: number; quote: string; title: string; summary: string | null; category: string
+  evidence_type: string; techniques: { id: string; name: string; basis: 'publisher' | 'suggested' }[]; cves: string[]; actors: string[]
+  technologies: string[]; sectors: string[]; regions: string[]
+  statistic: { value: string; population: string; period: string; definition: string } | null
+  confidence: string | null; origin: 'analyst' | 'summary' | 'ai'; review_status: 'unreviewed' | 'accepted' | 'rejected'; edited: boolean
+  model: string | null; notes: string | null; created_at: string; reviewed_at: string | null
+}
+export interface AIRun {
+  id: number; status: string; model: string | null; chunks: number; chunks_done: number; estimate_usd: number | null; cap_usd: number | null
+  cost_usd: number; proposed: number; kept: number; rejected: number; detail: string | null; created_at: string; finished_at: string | null
+}
+export interface AIEstimate {
+  enabled: boolean; model: string; chunks: number; pages: number; estimate_usd: number; worst_usd: number; cap_usd: number
+  month_spent_usd: number; month_budget_usd: number
+}
+export interface FindingsResponse {
+  findings: Finding[]; counts: Record<string, number>; runs: AIRun[]; ai: AIEstimate
+  categories: Record<string, string>; evidence: Record<string, string>
+}
+/** A finding being written: from a Summary item, selected text, or by hand. */
+export interface FindingDraft {
+  page: number; quote: string; title?: string; category?: string; evidence_type?: string; origin?: 'analyst' | 'summary'
+}
+export const EVIDENCE_HELP: Record<string, string> = {
+  incident_observation: 'A specific incident or case the publisher documented.',
+  aggregate_statistic: 'A figure across many cases, customers or alerts. Record its population and period.',
+  vendor_conclusion: "The publisher's interpretation or trend claim.",
+  actor_claim: 'Something a threat actor asserted. Unverified by definition.',
+  vendor_recommendation: 'Defensive advice from the publisher.',
+  user_observation: 'Your own observation, linked to this passage.',
+}
+export const ORIGIN_LABEL: Record<string, string> = { analyst: 'Added by you', summary: 'Saved from the summary', ai: 'Extracted by AI' }
+export const findingsPath = (id: number | string) => `/api/reports/${id}/findings`
+
+/** The longest run of whole sentences under the quote limit, so the quote stays a contiguous passage. */
+export function quoteFrom(text: string, max = 600) {
+  if (text.length <= max) return text
+  const cut = text.slice(0, max)
+  const end = Math.max(cut.lastIndexOf('. '), cut.lastIndexOf('? '), cut.lastIndexOf('! '))
+  return end > 80 ? cut.slice(0, end + 1) : cut.slice(0, cut.lastIndexOf(' '))
+}
+
+
+export const RUN_ACTIVE = new Set(['queued', 'running'])
+
+export function useFindings(id: number) {
+  return useQuery({
+    queryKey: ['findings', id], queryFn: () => api.get<FindingsResponse>(findingsPath(id)),
+    refetchInterval: (q) => (q.state.data?.runs.some((r) => RUN_ACTIVE.has(r.status)) ? 4000 : false),
+  })
+}
+

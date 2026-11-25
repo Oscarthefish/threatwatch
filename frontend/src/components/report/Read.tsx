@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { api, qs } from '../../api'
 import { Highlight, Loading, MarkedText, queryTerms } from '../ui'
-import { reportsPath, type Block, type ReadPage, type ReportDetail } from '../../reports'
+import { reportsPath, type Block, type FindingDraft, type ReadPage, type ReportDetail } from '../../reports'
 
 const WINDOW = 4
 
@@ -36,7 +36,7 @@ function Blocks({ blocks, terms, publisher }: { blocks: Block[]; terms: string[]
   return <>{out}</>
 }
 
-export function Read({ d }: { d: ReportDetail }) {
+export function Read({ d, onAdd }: { d: ReportDetail; onAdd: (dr: FindingDraft) => void }) {
   const id = d.report.id
   const total = d.pages.length
   const [params, setParams] = useSearchParams()
@@ -44,6 +44,15 @@ export function Read({ d }: { d: ReportDetail }) {
   const find = params.get('find') ?? ''
   const original = params.get('view') === 'original'
   const [text, setText] = useState(find)
+  const [sel, setSel] = useState<{ page: number; text: string } | null>(null)
+  // text selected inside one page of the reader can become a finding
+  const readSelection = () => {
+    const s = window.getSelection()
+    const t = s?.toString().replace(/\s+/g, ' ').trim() ?? ''
+    const node = s?.anchorNode instanceof Element ? s.anchorNode : s?.anchorNode?.parentElement
+    const pg = node?.closest<HTMLElement>('[data-page]')
+    setSel(t.length >= 12 && pg ? { page: Number(pg.dataset.page), text: t.slice(0, 600) } : null)
+  }
   const set = (patch: Record<string, string>) => setParams((p) => { const n = new URLSearchParams(p); n.set('tab', 'read'); Object.entries(patch).forEach(([k, v]) => v ? n.set(k, v) : n.delete(k)); return n }, { replace: true })
   const r = rangeFor(d, page)
   const q = useQuery({
@@ -92,13 +101,13 @@ export function Read({ d }: { d: ReportDetail }) {
           </nav>
         )}
       </aside>
-      <section className="card rp-reader" aria-labelledby="rp-read-h" id="rp-read-top">
+      <section className="card rp-reader" aria-labelledby="rp-read-h" id="rp-read-top" onMouseUp={readSelection} onKeyUp={readSelection} onTouchEnd={() => setTimeout(readSelection, 300)}>
         <div className="row between wrap rp-pager">
           <h2 id="rp-read-h" className="rp-h">{r.title ?? (r.start === r.end ? `Page ${r.start}` : `Pages ${r.start} to ${r.end}`)}<span className="xsmall muted"> of {total}</span></h2>
           <label className="rp-check small"><input type="checkbox" checked={original} onChange={(e) => set({ view: e.target.checked ? 'original' : '' })} /> Original text</label>
         </div>
         {q.isLoading ? <Loading /> : q.data?.pages.map((p) => (
-          <div key={p.page_no} id={`rp-p${p.page_no}`} className={`rp-pg ${p.page_no === page && page !== r.start ? 'target' : ''}`}>
+          <div key={p.page_no} id={`rp-p${p.page_no}`} data-page={p.page_no} className={`rp-pg ${p.page_no === page && page !== r.start ? 'target' : ''}`}>
             <div className="rp-pg-mark" aria-hidden="true"><span>Page {p.page_no}{p.label ? ` (printed ${p.label})` : ''}</span></div>
             <span className="sr-only">Page {p.page_no}</span>
             {original || !p.blocks ? (
@@ -111,7 +120,14 @@ export function Read({ d }: { d: ReportDetail }) {
           <button type="button" className="btn small" disabled={!prev} onClick={() => prev && set({ page: String(prev) })}>Previous</button>
           <button type="button" className="btn small" disabled={!next} onClick={() => next && set({ page: String(next) })}>Next</button>
         </div>
-        <p className="xsmall muted mb-0">{original ? 'The text exactly as extracted from the PDF.' : 'Reflowed for reading: running headers removed, lines joined into paragraphs, figure labels folded away. Switch to Original text if something looks wrong.'} Charts and images are not reproduced; download the PDF for those.</p>
+        {sel && (
+          <div className="rp-selbar" role="region" aria-label="Selected text">
+            <span className="small">Selected text on page {sel.page}</span>
+            <button type="button" className="btn small primary" onClick={() => { onAdd({ page: sel.page, quote: sel.text, origin: 'analyst' }); setSel(null) }}>Add as finding</button>
+            <button type="button" className="btn small quiet" onClick={() => { window.getSelection()?.removeAllRanges(); setSel(null) }}>Dismiss</button>
+          </div>
+        )}
+        <p className="xsmall muted mb-0">{original ? 'The text exactly as extracted from the PDF.' : 'Reflowed for reading: running headers removed, lines joined into paragraphs, figure labels folded away. Switch to Original text if something looks wrong. Select a passage to save it as a finding.'} Charts and images are not reproduced; download the PDF for those.</p>
       </section>
     </div>
   )

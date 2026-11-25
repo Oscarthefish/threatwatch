@@ -11,7 +11,7 @@ import re
 import statistics
 from collections import Counter
 
-ANALYSIS_VERSION = 2
+ANALYSIS_VERSION = 3
 
 TERMINAL = re.compile(r"[.!?:;”\"')\]]$")
 BULLET = re.compile(r"^(?:[+•▪●◦‣■□➢➤✓✔]|[-–—](?=\s)|\(?\d{1,2}[.)](?=\s))\s*")
@@ -91,6 +91,7 @@ def _vendor_terms(publisher: str | None) -> list[str]:
         # the publisher's name alone is not product guidance (reports mention themselves constantly)
         terms.append(re.escape(first) + r"['’]s\s+[A-Z]")
         terms.append(re.escape(first) + r"\s+(?:customers?|platform|products?|solutions?|services?|offerings?)\b")
+        terms.append(re.escape(first) + r"\s*\((?:NYSE|NASDAQ|LSE)\b")  # the "about us" boilerplate
     return terms
 
 
@@ -241,13 +242,40 @@ def blocks(text: str, repeated: set[str], vendor_terms: list[str]) -> tuple[list
             merged.append(b)
     end_run()
 
-    if vendor_terms:
-        parts = [t if "\\" in t else re.escape(t) + r"(?![\w-])" for t in vendor_terms]
-        pat = re.compile(r"(?<![\w-])(?:" + "|".join(parts) + r")")
+    pat = vendor_pattern(vendor_terms)
+    if pat:
+        in_vendor_section = False
         for b in merged:
-            if b["type"] in ("p", "li") and pat.search(b["text"]):
+            if b["type"] in ("h", "figure"):
+                in_vendor_section = False
+                continue
+            if not pat.search(b["text"]):
+                b["vendor"] = in_vendor_section or None  # product sections continue until the next heading
+                if not b["vendor"]:
+                    b.pop("vendor")
+                continue
+            # product guidance when the passage opens with the product or is mostly about it; a passing mention in a
+            # general passage is not (that sentence alone is left out of what is sent to the AI)
+            sents = _sentences(b["text"]) or [b["text"]]
+            about = sum(len(x) for x in sents if pat.search(x))
+            if pat.search(sents[0]) or about >= 0.5 * sum(len(x) for x in sents):
                 b["vendor"] = True
+                in_vendor_section = True
     return merged, labels
+
+
+def vendor_pattern(vendor_terms: list[str]) -> re.Pattern | None:
+    if not vendor_terms:
+        return None
+    parts = [t if "\\" in t else re.escape(t) + r"(?![\w-])" for t in vendor_terms]
+    return re.compile(r"(?<![\w-])(?:" + "|".join(parts) + r")")
+
+
+def strip_vendor(text: str, pat: re.Pattern | None) -> str:
+    """Drop sentences that name the publisher's products from an otherwise general passage."""
+    if not pat or not pat.search(text):
+        return text
+    return " ".join(x for x in _sentences(text) if not pat.search(x))
 
 
 def _chapters(page_labels: list[list[str]], page_blocks: list[list[dict]]) -> list[dict]:

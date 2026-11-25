@@ -95,6 +95,18 @@ def reports_job() -> None:
         conn.close()
 
 
+def report_ai_job() -> None:
+    """Run AI extractions people have started. Separate from reports_job so a long run never delays PDF processing."""
+    from .reports import ai_extract
+    conn = connect()
+    try:
+        ai_extract.run_queued(conn)
+    except Exception:
+        log.exception("report AI extraction failed")
+    finally:
+        conn.close()
+
+
 def poll_requests() -> None:
     conn = connect()
     try:
@@ -158,6 +170,8 @@ def main() -> None:
     if n:
         log.info("re-queued %d report(s) interrupted mid-extraction", n)
     reports.clean_incoming()
+    from .reports import ai_extract
+    ai_extract.recover_stale(conn)
     n = reports.reanalyse_stale(conn)
     if n:
         log.info("rebuilt the reading view for %d report(s)", n)
@@ -173,6 +187,7 @@ def main() -> None:
     sched.add_job(maintenance_job, daily["maintenance"], id="maintenance")
     sched.add_job(poll_requests, IntervalTrigger(seconds=30), id="poll")
     sched.add_job(reports_job, IntervalTrigger(seconds=20), id="reports")
+    sched.add_job(report_ai_job, IntervalTrigger(seconds=15), id="report_ai")
 
     def startup():
         ingest_cycle()

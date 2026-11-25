@@ -47,6 +47,11 @@ class Settings(BaseSettings):
     reports_max_pages: int = 600  # pages beyond this are not extracted; the report is flagged for review
     reports_child_mem_mb: int = 224  # address-space cap for the PDF text extractor (worker container is 256 MB)
     reports_timeout_seconds: int = 180
+    # Optional AI extraction of report findings: off until started per report; its own budget, separate from news
+    reports_ai_tier: str = "deep"  # "deep" (Sonnet) or "fast" (Haiku)
+    reports_ai_effort: str = "medium"
+    reports_ai_max_run_usd: float = 1.50  # a run stops before it could pass this
+    reports_ai_monthly_budget_usd: float = 5.00
 
     # AI (optional; app works without it)
     ai_provider: str = "anthropic"  # "anthropic" or "none"

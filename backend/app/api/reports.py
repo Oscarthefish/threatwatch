@@ -21,7 +21,8 @@ from pydantic import BaseModel, Field, field_validator
 from ..auth import get_db, require_user
 from ..config import get_settings
 from ..db import get_setting, jdumps, jloads, now_iso, set_setting, tx
-from ..reports import process, registry
+from ..reports import ai_extract, process, registry
+from ..reports import findings as F
 from .content import _fts_query
 
 router = APIRouter(prefix="/api/reports", dependencies=[Depends(require_user)])
@@ -403,7 +404,7 @@ def get_report(rid: int, conn: sqlite3.Connection = Depends(get_db)):
     d.pop("sha256", None)
     d.pop("analysis", None)
     d["sha256_prefix"] = r["sha256"][:12] if r["sha256"] else None
-    analysis = jloads(r["analysis"], None)
+    analysis = jloads(r["analysis"], {}) if r["analysis"] else None
     src = conn.execute("SELECT * FROM report_sources WHERE id=?", (r["source_id"],)).fetchone() if r["source_id"] else None
     sections = [dict(s) for s in conn.execute(
         "SELECT ord, level, title, page_start, page_end, origin FROM report_sections WHERE report_id=? ORDER BY ord", (rid,))]
@@ -514,7 +515,7 @@ def read(rid: int, start: int = 1, count: int = 4, raw: bool = False, conn: sqli
     out = []
     for p in conn.execute("SELECT page_no, label, text, blocks FROM report_pages WHERE report_id=? AND page_no>=? ORDER BY page_no LIMIT ?",
                           (rid, max(1, start), count)):
-        out.append({"page_no": p["page_no"], "label": p["label"], "blocks": jloads(p["blocks"], None),
+        out.append({"page_no": p["page_no"], "label": p["label"], "blocks": jloads(p["blocks"], []) if p["blocks"] else None,
                     "text": p["text"] if raw or p["blocks"] is None else None})
     return {"pages": out}
 
@@ -545,3 +546,113 @@ def download(rid: int, conn: sqlite3.Connection = Depends(get_db)):
     # Always a download, never rendered inside the app's origin.
     return FileResponse(path, media_type="application/pdf", filename=name, content_disposition_type="attachment",
                         headers={"X-Content-Type-Options": "nosniff", "Cache-Control": "private, no-store"})
+
+
+# ------------------------------------------------------------------ findings
+class FindingIn(BaseModel):
+    page: int | None = Field(None, ge=1, le=5000)
+    quote: str | None = Field(None, max_length=2000)
+    title: str | None = Field(None, max_length=200)
+    summary: str | None = Field(None, max_length=1200)
+    category: str | None = None
+    evidence_type: str | None = None
+    techniques: list[str] | None = Field(None, max_length=20)
+    cves: list[str] | None = Field(None, max_length=20)
+    actors: list[str] | None = Field(None, max_length=12)
+    technologies: list[str] | None = Field(None, max_length=20)
+    sectors: list[str] | None = Field(None, max_length=10)
+    regions: list[str] | None = Field(None, max_length=8)
+    statistic: dict | None = None
+    confidence: Literal["high", "medium", "low"] | None = None
+    notes: str | None = Field(None, max_length=4000)
+    origin: Literal["analyst", "summary"] = "analyst"
+    review_status: Literal["unreviewed", "accepted", "rejected"] | None = None
+
+
+@router.get("/{rid}/findings")
+def list_findings(rid: int, conn: sqlite3.Connection = Depends(get_db)):
+    _get(conn, rid)
+    rows = [F.row(r) for r in conn.execute(
+        "SELECT * FROM report_findings WHERE report_id=? ORDER BY page_no, id", (rid,))]
+    counts = {k: sum(1 for f in rows if f["review_status"] == k) for k in F.REVIEW}
+    runs = [dict(r) for r in conn.execute("SELECT * FROM report_ai_runs WHERE report_id=? ORDER BY id DESC LIMIT 10", (rid,))]
+    return {"findings": rows, "counts": counts, "runs": runs, "ai": ai_extract.estimate(conn, rid),
+            "categories": F.CATEGORIES, "evidence": F.EVIDENCE}
+
+
+@router.post("/{rid}/findings")
+def add_finding(rid: int, body: FindingIn, conn: sqlite3.Connection = Depends(get_db)):
+    _get(conn, rid)
+    try:
+        f = F.build(conn, rid, body.model_dump())
+    except F.FindingError as e:
+        raise HTTPException(422, str(e)) from None
+    with tx(conn):
+        fid, created = F.insert(conn, rid, f, body.origin)
+    if not created:
+        raise HTTPException(409, "A finding already quotes that passage")
+    return {"id": fid}
+
+
+class SuggestIn(BaseModel):
+    page: int = Field(..., ge=1, le=5000)
+    quote: str = Field(..., max_length=2000)
+
+
+@router.post("/{rid}/findings/suggest")
+def suggest_finding(rid: int, body: SuggestIn, conn: sqlite3.Connection = Depends(get_db)):
+    _get(conn, rid)
+    return F.suggest(conn, rid, body.page, body.quote)
+
+
+@router.patch("/{rid}/findings/{fid}")
+def update_finding(rid: int, fid: int, body: FindingIn, conn: sqlite3.Connection = Depends(get_db)):
+    _get(conn, rid)
+    data = body.model_dump(exclude_unset=True)
+    data.pop("origin", None)
+    try:
+        F.update(conn, rid, fid, data)
+    except LookupError:
+        raise HTTPException(404, "Finding not found") from None
+    except F.FindingError as e:
+        raise HTTPException(422, str(e)) from None
+    return {"ok": True}
+
+
+@router.delete("/{rid}/findings/{fid}")
+def delete_finding(rid: int, fid: int, conn: sqlite3.Connection = Depends(get_db)):
+    r = conn.execute("SELECT origin FROM report_findings WHERE id=? AND report_id=?", (fid, rid)).fetchone()
+    if not r:
+        raise HTTPException(404, "Finding not found")
+    if r["origin"] == "ai":  # kept as rejected so a re-run does not bring it back
+        raise HTTPException(409, "Reject AI findings instead of deleting them")
+    conn.execute("DELETE FROM report_findings WHERE id=?", (fid,))
+    return {"ok": True}
+
+
+class RunIn(BaseModel):
+    confirm_usd: float = Field(..., ge=0)  # the estimate the person agreed to
+
+
+@router.post("/{rid}/ai/run")
+def start_ai(rid: int, body: RunIn, conn: sqlite3.Connection = Depends(get_db)):
+    r = _get(conn, rid)
+    if r["status"] not in ("processed", "needs_review"):
+        raise HTTPException(409, "Extract the text first")
+    est = ai_extract.estimate(conn, rid)
+    if est["estimate_usd"] > body.confirm_usd + 0.05:
+        raise HTTPException(409, f"The estimate changed to about US${est['estimate_usd']:.2f}; check it and start again")
+    try:
+        run_id = ai_extract.start(conn, rid)
+    except ai_extract.RunError as e:
+        raise HTTPException(409, str(e)) from None
+    return {"run_id": run_id}
+
+
+@router.post("/{rid}/ai/cancel")
+def cancel_ai(rid: int, conn: sqlite3.Connection = Depends(get_db)):
+    _get(conn, rid)
+    n = conn.execute("UPDATE report_ai_runs SET status='cancelled', detail='Cancelled', finished_at=? WHERE report_id=? AND status='queued'",
+                     (now_iso(), rid)).rowcount
+    n += conn.execute("UPDATE report_ai_runs SET status='cancelled' WHERE report_id=? AND status='running'", (rid,)).rowcount
+    return {"ok": True, "cancelled": n}

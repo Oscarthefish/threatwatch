@@ -1,10 +1,14 @@
 import { useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { ExtLink, techniqueUrl } from '../ui'
-import type { Analysis, Chapter, Named, ReportDetail } from '../../reports'
+import { quoteFrom, type Analysis, type Chapter, type FindingDraft, type Named, type ReportDetail } from '../../reports'
 
 const inRange = (p: number, c?: Chapter) => !c || (p >= c.start && p <= c.end)
 const chapName = (c: Chapter) => `${c.number} ${c.title}`
+
+function Save({ onClick, label }: { onClick: () => void; label: string }) {
+  return <button type="button" className="rp-save" onClick={onClick} aria-label={`Save as finding: ${label.slice(0, 60)}`}>Save as finding</button>
+}
 
 export function PageLink({ page }: { page: number }) {
   return <Link className="rp-pl" to={`?tab=read&page=${page}`} aria-label={`Read page ${page}`}>p. {page}</Link>
@@ -50,7 +54,7 @@ function NamedList({ items, kind }: { items: Named[]; kind?: 'cve' }) {
   )
 }
 
-export function Summary({ d }: { d: ReportDetail }) {
+export function Summary({ d, onAdd }: { d: ReportDetail; onAdd: (dr: FindingDraft) => void }) {
   const a = d.analysis as Analysis
   const [chap, setChap] = useState<string>('')
   const c = a.chapters.find((x) => x.number === chap)
@@ -87,20 +91,20 @@ export function Summary({ d }: { d: ReportDetail }) {
       {nothing && <div className="notice">Nothing stood out in {c ? 'this chapter' : 'the text'} by these rules. The Read tab has the full text.</div>}
       {takeaways.length > 0 && (
         <Section id="rp-s-kt" title="Key takeaways">
-          <ByChapter items={takeaways} one={one} render={(t, i) => <p key={i} className="rp-item">{t.text} <PageLink page={t.page} /></p>} />
+          <ByChapter items={takeaways} one={one} render={(t, i) => <p key={i} className="rp-item">{t.text} <PageLink page={t.page} /> <Save label={t.text} onClick={() => onAdd({ page: t.page, quote: quoteFrom(t.text), title: t.text.slice(0, 120), category: 'attacker_behaviour', evidence_type: 'vendor_conclusion', origin: 'summary' })} /></p>} />
         </Section>
       )}
       {recs.length > 0 && (
         <Section id="rp-s-rec" title="What the report recommends" note={`The publisher's defensive advice in their own words; open one to read it. Advice about ${publisher}'s products is kept apart, at the end.`}>
           <ByChapter items={recs} one={one} render={(r, i) => r.title ? (
             <details key={i} className="rp-rec"><summary><span className="rp-rec-t">{r.title}</span> <span className="xsmall muted">p. {r.page}</span></summary>
-              <p className="mb-0">{r.text} <PageLink page={r.page} /></p></details>
-          ) : <p key={i} className="rp-rec mb-0">{r.text} <PageLink page={r.page} /></p>} />
+              <p className="mb-0">{r.text} <PageLink page={r.page} /> <Save label={r.title} onClick={() => onAdd({ page: r.page, quote: quoteFrom(r.text), title: r.title ?? '', category: 'hardening_recommendation', evidence_type: 'vendor_recommendation', origin: 'summary' })} /></p></details>
+          ) : <p key={i} className="rp-rec mb-0">{r.text} <PageLink page={r.page} /> <Save label={r.text} onClick={() => onAdd({ page: r.page, quote: quoteFrom(r.text), title: r.text.slice(0, 100), category: 'hardening_recommendation', evidence_type: 'vendor_recommendation', origin: 'summary' })} /></p>} />
         </Section>
       )}
       {stats.length > 0 && (
         <Section id="rp-s-st" title="Figures quoted in the report" note="As the publisher states them, from their own data. Read the methodology before comparing figures with other reports.">
-          <ByChapter items={stats} one={one} render={(s, i) => <p key={i} className="rp-item">{s.text} <PageLink page={s.page} /></p>} />
+          <ByChapter items={stats} one={one} render={(s, i) => <p key={i} className="rp-item">{s.text} <PageLink page={s.page} /> <Save label={s.text} onClick={() => onAdd({ page: s.page, quote: quoteFrom(s.text), category: 'statistical_trend', evidence_type: 'aggregate_statistic', origin: 'summary' })} /></p>} />
         </Section>
       )}
       {(actors.length + malware.length + cves.length + tech.length) > 0 && (

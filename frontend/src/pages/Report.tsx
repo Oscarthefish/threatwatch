@@ -6,13 +6,15 @@ import { BackLink, ErrorBox, ExtLink, Field, Loading, PageHeader, TimeAgo, fmtDa
 import { Sheet, useConfirm } from '../components/Sheet'
 import { IconBookmark } from '../components/icons'
 import {
-  CONF_LABEL, FREQ_LABEL, META_SOURCE_LABEL, REGION_LABEL, fmtSize, reportsPath, useReportsMeta, type Report as R, type ReportDetail,
+  CONF_LABEL, FREQ_LABEL, META_SOURCE_LABEL, REGION_LABEL, fmtSize, reportsPath, useReportsMeta, type Finding, type FindingDraft,
+  type Report as R, type ReportDetail,
 } from '../reports'
 import { StatusPill, UploadForm } from './Reports'
 import { Summary } from '../components/report/Summary'
 import { Read } from '../components/report/Read'
+import { FindingForm, Findings } from '../components/report/Findings'
 
-const TABS = [['summary', 'Summary'], ['read', 'Read'], ['details', 'Details']] as const
+const TABS = [['summary', 'Summary'], ['findings', 'Findings'], ['read', 'Read'], ['details', 'Details']] as const
 const OLD: Record<string, Tab> = { overview: 'details', contents: 'read', pages: 'read' }
 type Tab = typeof TABS[number][0]
 
@@ -27,10 +29,13 @@ export default function Report() {
   const { id = '' } = useParams()
   const [params, setParams] = useSearchParams()
   const q = useReport(id)
+  const toast = useToast()
   const asked = params.get('tab') ?? ''
   const tab = (TABS.find(([k]) => k === asked)?.[0] ?? OLD[asked] ?? (q.data?.analysis ? 'summary' : 'details')) as Tab
   usePageTitle(q.data?.report.title)
   const go = (t: Tab, extra?: Record<string, string>) => setParams(() => { const n = new URLSearchParams(); n.set('tab', t); Object.entries(extra ?? {}).forEach(([k, v]) => n.set(k, v)); return n }, { replace: true })
+  const [draft, setDraft] = useState<FindingDraft | null>(null)
+  const [editing, setEditing] = useState<Finding | null>(null)
   if (q.isLoading) return <Loading />
   if (q.error || !q.data) return <><BackLink fallback="/reports" label="Reports library" /><ErrorBox error={q.error} onRetry={() => q.refetch()} /></>
   const { report: r } = q.data
@@ -51,10 +56,20 @@ export default function Report() {
       </div>
       <div id="rp-panel" role="tabpanel" aria-labelledby={`tab-${tab}`}>
         {tab === 'details' ? <Overview d={q.data} />
-          : tab === 'read' ? <Read d={q.data} />
-            : q.data.analysis ? <Summary d={q.data} />
+          : tab === 'read' ? <Read d={q.data} onAdd={setDraft} />
+            : tab === 'findings' ? <Findings reportId={r.id} onAdd={(dr) => setDraft(dr ?? { page: 1, quote: '' })} onEdit={setEditing} />
+            : q.data.analysis ? <Summary d={q.data} onAdd={setDraft} />
               : <div className="notice">The summary appears once the text has been extracted. <button type="button" className="btn small" onClick={() => go('details')}>See processing status</button></div>}
       </div>
+      {(draft || editing) && (
+        <Sheet title={editing ? 'Edit finding' : 'New finding'} onClose={() => { setDraft(null); setEditing(null) }}>
+          <FindingForm reportId={r.id} draft={draft ?? undefined} existing={editing ?? undefined} onDone={() => {
+            const added = !!draft
+            setDraft(null); setEditing(null)
+            if (added) toast('Finding saved. See the Findings tab.')
+          }} />
+        </Sheet>
+      )}
     </>
   )
 }

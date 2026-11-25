@@ -1169,3 +1169,21 @@ details.rp-rec[open] summary { margin-bottom: var(--s-1); }
 @media (max-width: 999px) { .rp-find .rp-nav { display: flex; gap: var(--s-2); overflow-x: auto; scrollbar-width: none; padding-bottom: 2px; }
   .rp-find .rp-nav .rp-hit { min-width: 180px; border: var(--hairline); border-radius: var(--r-sm); } }
 .rp-pages > * { min-width: 0; }
+
+/* --- Report findings --- */
+.rp-save { border: 0; background: none; padding: 0 4px; min-height: 24px; font: inherit; font-size: var(--t-xs); font-weight: var(--w-semibold);
+  color: var(--muted); cursor: pointer; text-decoration: underline; text-underline-offset: 2px; position: relative; }
+.rp-save::before { content: ""; position: absolute; inset: -10px -4px; }
+.rp-save:hover { color: var(--link); }
+.rp-finding.rejected { opacity: .75; }
+.rp-f-title { font-size: var(--t-md); margin: 0; min-width: 0; overflow-wrap: anywhere; }
+.rp-quote { margin: var(--s-3) 0; padding: var(--s-2) var(--s-3); border-left: 3px solid var(--primary); background: var(--surface-2);
+  border-radius: 0 var(--r-sm) var(--r-sm) 0; font-size: var(--t-sm); line-height: 1.6; max-width: var(--measure); }
+.rp-stat { margin-top: var(--s-2); }
+.rp-f-tags { margin-top: var(--s-2); }
+.rp-fieldset { border: var(--hairline); border-radius: var(--r-sm); padding: var(--s-3); margin: 0; display: grid; gap: var(--s-2); }
+.rp-selbar { position: sticky; bottom: calc(var(--s-3) + env(safe-area-inset-bottom)); z-index: 5; display: flex; flex-wrap: wrap; align-items: center;
+  gap: var(--s-2); margin: var(--s-3) 0; padding: var(--s-2) var(--s-3); background: var(--surface); border: 1px solid var(--border-strong);
+  border-radius: var(--r-md); box-shadow: var(--shadow-overlay); }
+.rp-selbar span { flex: 1; min-width: 140px; }
+@media (max-width: 899px) { .rp-selbar { bottom: calc(76px + env(safe-area-inset-bottom)); } }

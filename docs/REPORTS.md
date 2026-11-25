@@ -4,7 +4,7 @@ Turns published threat reports (annual, quarterly and specialist research from v
 government agencies) into a private, page-referenced knowledge base. Later phases extract attributable findings,
 consolidate attacker behaviours across reports and connect them to Threat Landscapes and defensive planning.
 
-Status: **Phase 1 built** (library, registry, upload, text extraction with page references), plus a reading view and a rule-based summary. Phases 2 to 7 are planned below.
+Status: **Phases 1 and 2 built**: library, registry, upload, page-referenced text, reading view, rule-based summary, and findings (by hand or optional AI) with verified quotes. Phases 2 to 7 are planned below.
 
 ## 1. Architecture assessment (2026-11-25)
 
@@ -122,7 +122,48 @@ is not stored in the repository; the tests use synthetic text with the same layo
 - The extractor's address-space cap does not work under x86 emulation on Apple silicon (`deploy/local.sh` with an
   amd64 image); there it fails with "stopped unexpectedly". The live server is native x86-64.
 
-## 3. Decisions needed before Phase 2
+## 3. Phase 2: findings (built)
+
+A finding is one citable passage: an observation, a figure, a conclusion, a claim, a recommendation or a stated
+limitation, stored with its exact quote and page (`report_findings`, migration 010).
+
+**Rules applied to every finding, whoever proposes it** (`app/reports/findings.py`)
+- The quote (12 to 600 characters) must appear on the cited page. Matching ignores whitespace, line wraps, curly
+  quotes and dash styles, and accepts either the raw text or the reading view.
+- Category from the brief's list of 27; evidence type from: documented incident observation, aggregated statistic,
+  publisher's research conclusion, threat actor's unverified claim, publisher's recommended defence, your own observation.
+  "Analyst-validated" is the review status (accepted), not an evidence type.
+- ATT&CK IDs are checked against v20.1 (revoked IDs resolved, unknown IDs dropped). An ID printed on the page is the
+  publisher's mapping; any other is marked as a suggestion (yours or the AI's). CVE IDs are kept only if the page states them.
+- Statistics carry value, population, period and definition as stated, with empty fields where the report is silent.
+  Nothing adds or compares figures across reports.
+- One finding per passage: re-running never duplicates, overwrites or revives a finding, including rejected ones.
+
+**Adding findings by hand.** "Save as finding" on Summary items (takeaways, recommendations, figures) and "Add as finding"
+for text selected in Read both open a form with the page and quote filled in. The rules pre-fill ATT&CK IDs, CVEs, actors
+and technologies they can see in the passage. Findings a person writes start as accepted.
+
+**AI extraction** (`app/reports/ai_extract.py`, off until started per report)
+- Sends only the report's text, one chapter (or up to eight pages) per request, with page markers. Product guidance,
+  figure labels and sentences naming the publisher's products are left out. No profiles, notes, other reports or
+  settings are sent. The text is wrapped as untrusted data, the model has no tools, and output is schema-constrained.
+- Every proposed finding goes through the rules above and must cite a page inside the section it was sent. Failures are
+  counted and discarded. Kept findings arrive unreviewed and are labelled "AI" until you accept, edit or reject them.
+- Cost: shown before the run (about US$0.38 for the 70-page SentinelOne report on Sonnet 5.5), confirmed in a dialog,
+  capped per run (`TW_REPORTS_AI_MAX_RUN_USD`, 1.50; the run stops before a section that could pass the cap) and per month
+  (`TW_REPORTS_AI_MONTHLY_BUDGET_USD`, 5.00). It does not touch the daily news budget or its request cap. Model and
+  effort: `TW_REPORTS_AI_TIER` (deep = Sonnet, fast = Haiku), `TW_REPORTS_AI_EFFORT` (medium). Identical requests are
+  served from the existing AI output cache at no cost.
+- Each run records model, prompt version, sections done, tokens, cost, proposed, kept and discarded counts. A restart
+  mid-run marks it failed; a run can be stopped from the page.
+
+**Tests.** Quote verification (invented, wrong page, wrapped and curly-quoted text), enums, technique and CVE validation,
+edit and review, delete rules, and the AI run with a stubbed model: product guidance not sent, only verified findings
+kept, re-runs not duplicating or reviving rejected findings, daily news budget untouched, failures, the per-run cap,
+the monthly budget and the consent check. The real model has not been called in tests; the first real run is the
+first end-to-end check of the prompt.
+
+## 4. Earlier decision: extraction method
 
 **Structured extraction method.** Reliable extraction of individual, attributable findings from report prose is not
 realistic with rules alone. Options:
@@ -133,15 +174,12 @@ realistic with rules alone. Options:
 | B. Claude per section, opt-in per report, strict JSON schema, every finding must quote text present on its cited page (verified server-side), output marked "Extracted by AI, unreviewed" | Good first pass; needs review | Roughly US$0.20 to 0.50 per 60-page report with Sonnet 5.5, a few cents with Haiku 5.5 (the 47-page IC3 report is about 18k tokens of text; most cost is structured output) | Report text is published vendor content, not your profile data. Needs its own budget, separate from the US$0.50/day news cap. |
 | C. Local model via Ollama | Lower than B on long technical prose | Free to run | Cannot run on the 1 GB droplet; would need the Mac or a larger server. |
 
-Recommendation: A plus B, with B off by default and the estimated cost shown before each run. Profile data is never
+Chosen 2026-11-26: A plus B, with B off by default and the estimated cost shown before each run. Profile data is never
 sent. C can be added behind the same interface later if a machine is available.
 
-## 4. Remaining phases
+## 5. Remaining phases
 
-2. **Structured extraction**: `report_findings` (category, evidence type, page and quoted span, methodology fields,
-   confidence, review status, extraction version); deterministic candidate detection; optional AI pass; ATT&CK IDs
-   validated against v20.1 (revoked IDs resolved, unknown IDs rejected); CVEs linked to vulnerability records; review
-   workflow. Statistics keep their population, denominator and period, and are never summed across reports.
+2. ~~Structured extraction~~: built (section 3).
 3. **Behaviour knowledge base**: canonical behaviours linked to findings, merge and split with audit history; telemetry
    catalogue built on `landscape/kb.TELEMETRY`; monitoring, hunting, detection (draft queries labelled as such),
    hardening and readiness content per behaviour.
@@ -155,7 +193,7 @@ sent. C can be added behind the same interface later if a machine is available.
 7. **Readiness and development**: intelligence-derived readiness questions and exercises; interview questions citing
    findings; Markdown exports with scope, sources, dates, confidence, assumptions and unknowns.
 
-## 5. Security notes
+## 6. Security notes
 - Uploaded documents and extracted text are untrusted data. They are rendered only as plain text; nothing in a report is
   executed, followed or treated as an instruction. A test stores an instruction-like line and a `<script>` tag as inert text.
 - The parser runs in a separate, limited process so a malicious or pathological PDF cannot exhaust the worker or read secrets.
