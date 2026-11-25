@@ -67,7 +67,8 @@ _Last updated 2026-11-25._
 - ✅ PDF upload with size cap, signature check, SHA-256 deduplication; documents stored by hash in the data volume
 - ✅ Text extraction per page in a resource-limited child process; PDF bookmarks as sections; processing history; re-processing keeps your edits
 - ✅ Library with full-text search, status filters, bookmarks; report page with provenance-marked details, contents and page text viewer
-- Verified: 133 backend tests; 0 axe violations and no overflow at 390 and 1366 px, light and dark. Plan, decisions and limitations: docs/REPORTS.md
+- ✅ Reading view (reflowed paragraphs, headings, lists, figure text folded, running headers removed) and a rule-based Summary: chapters, key takeaways, recommendations, quoted figures, named actors, malware, CVEs and techniques, vendor product guidance kept apart
+- Verified: 138 backend tests; 0 axe violations and no overflow at 390 and 1366 px, light and dark. Plan, decisions and limitations: docs/REPORTS.md
 
 ## Known limitations
 - Sources are defined in code (`backend/app/ingest/sources.py`); the UI can enable/disable them but not add new ones.

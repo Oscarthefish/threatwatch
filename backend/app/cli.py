@@ -126,7 +126,7 @@ def cmd_process_reports(args) -> int:
         n += done
         if not done:
             break
-    print(f"Processed {n} queued report(s)")
+    print(f"Processed {n} queued report(s); rebuilt the reading view for {process.reanalyse_stale(conn)}")
     return 0
 
 

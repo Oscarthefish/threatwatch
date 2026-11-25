@@ -4,7 +4,7 @@ Turns published threat reports (annual, quarterly and specialist research from v
 government agencies) into a private, page-referenced knowledge base. Later phases extract attributable findings,
 consolidate attacker behaviours across reports and connect them to Threat Landscapes and defensive planning.
 
-Status: **Phase 1 built** (library, registry, upload, text extraction with page references). Phases 2 to 7 are planned below.
+Status: **Phase 1 built** (library, registry, upload, text extraction with page references), plus a reading view and a rule-based summary. Phases 2 to 7 are planned below.
 
 ## 1. Architecture assessment (2026-11-25)
 
@@ -90,10 +90,33 @@ pages with text. A 30 MB cap produced the clean "limits" failure. UI: 0 axe viol
 library, search, report overview, contents, page text, edit and upload sheets and the registry, at 390 and 1366 px in
 light and dark.
 
+### Reading view and summary (migration `009_report_reading.sql`, `app/reports/reading.py`)
+Built from the stored page text by layout rules, with no AI and no PDF re-read, so it can be improved and re-run
+(`analysis_version`; the worker rebuilds older analyses at start-up).
+- **Reading blocks per page:** running headers, footers and page numbers are found as short lines repeated at the top or
+  bottom of many pages and set aside. Wrapped lines are rejoined into paragraphs; headings, bullet lists and wrapped
+  two-line headings are recognised. Runs of short fragments are folded into "Text from a figure or diagram". Letter-spacing
+  artefacts such as "T able" are repaired. The original text is always one click away.
+- **Chapters:** numbered running labels ("03 INFRASTRUCTURE") give chapter ranges, titled from the chapter's opening page.
+- **Summary:** key-takeaway lists; the publisher's recommendations (headed paragraphs on playbook or recommendation
+  pages); sentences that quote figures (CVE IDs, model numbers and years are not counted as figures); threat actors,
+  malware, CVEs (with CVSS and CISA KEV status when Threat Watch has the record) and products named in the text, using
+  the existing entity lists; ATT&CK techniques, either cited by ID (validated, revoked IDs resolved) or named in the text
+  (labelled as a Threat Watch match, never as the publisher's mapping; generic names such as "Multi-Factor
+  Authentication" are skipped).
+- **Vendor product guidance:** passages that name the publisher's own products (a short list per major vendor, or the
+  publisher's name used possessively or with "customers" or "platform") are labelled and kept out of the recommendations.
+- **Title:** a machine-generated file name (for example a UUID) is replaced by the running header or the first page's text.
+
+Tuned on the SentinelOne Annual Threat Report 2026 (70 pages): 8 chapters matching its contents page, 24 key takeaways,
+36 recommendations, 32 vendor passages kept apart, 7 quoted figures, 4 CVEs, 11 named techniques. Text from that report
+is not stored in the repository; the tests use synthetic text with the same layout patterns.
+
 ### Limitations
+- The summary is extraction, not understanding: it finds passages by layout, so a report with an unusual design yields less.
 - Text layer only. Image-based PDFs are flagged for review; OCR is not built (it would need Tesseract, about 30 MB in
   the image and heavy CPU on a 1 GB server).
-- Sections come only from PDF bookmarks. Many designed reports have none, so the Contents tab is often empty.
+- Sections come from PDF bookmarks or numbered running labels; reports with neither have no chapter list.
 - Multi-column and designed layouts can interleave text; tables come through as plain text.
 - No automatic discovery yet; the registry is a list to verify.
 - The extractor's address-space cap does not work under x86 emulation on Apple silicon (`deploy/local.sh` with an

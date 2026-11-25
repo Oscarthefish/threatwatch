@@ -158,6 +158,9 @@ def main() -> None:
     if n:
         log.info("re-queued %d report(s) interrupted mid-extraction", n)
     reports.clean_incoming()
+    n = reports.reanalyse_stale(conn)
+    if n:
+        log.info("rebuilt the reading view for %d report(s)", n)
     has_briefing = conn.execute("SELECT 1 FROM briefings LIMIT 1").fetchone()
     conn.close()
     log.info("worker starting; AI %s; interval %d min", "enabled" if s.ai_enabled else "disabled", s.ingest_interval_minutes)

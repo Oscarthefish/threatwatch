@@ -1,16 +1,19 @@
 import { useState, type ReactNode } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { api, ApiError, qs } from '../api'
-import { BackLink, ErrorBox, ExtLink, Field, Highlight, Loading, MarkedText, PageHeader, TimeAgo, fmtDate, queryTerms, usePageTitle, useToast } from '../components/ui'
+import { api, ApiError } from '../api'
+import { BackLink, ErrorBox, ExtLink, Field, Loading, PageHeader, TimeAgo, fmtDate, usePageTitle, useToast } from '../components/ui'
 import { Sheet, useConfirm } from '../components/Sheet'
 import { IconBookmark } from '../components/icons'
 import {
   CONF_LABEL, FREQ_LABEL, META_SOURCE_LABEL, REGION_LABEL, fmtSize, reportsPath, useReportsMeta, type Report as R, type ReportDetail,
 } from '../reports'
 import { StatusPill, UploadForm } from './Reports'
+import { Summary } from '../components/report/Summary'
+import { Read } from '../components/report/Read'
 
-const TABS = [['overview', 'Overview'], ['contents', 'Contents'], ['pages', 'Page text']] as const
+const TABS = [['summary', 'Summary'], ['read', 'Read'], ['details', 'Details']] as const
+const OLD: Record<string, Tab> = { overview: 'details', contents: 'read', pages: 'read' }
 type Tab = typeof TABS[number][0]
 
 function useReport(id: string) {
@@ -23,8 +26,9 @@ function useReport(id: string) {
 export default function Report() {
   const { id = '' } = useParams()
   const [params, setParams] = useSearchParams()
-  const tab = (TABS.find(([k]) => k === params.get('tab'))?.[0] ?? 'overview') as Tab
   const q = useReport(id)
+  const asked = params.get('tab') ?? ''
+  const tab = (TABS.find(([k]) => k === asked)?.[0] ?? OLD[asked] ?? (q.data?.analysis ? 'summary' : 'details')) as Tab
   usePageTitle(q.data?.report.title)
   const go = (t: Tab, extra?: Record<string, string>) => setParams(() => { const n = new URLSearchParams(); n.set('tab', t); Object.entries(extra ?? {}).forEach(([k, v]) => n.set(k, v)); return n }, { replace: true })
   if (q.isLoading) return <Loading />
@@ -46,9 +50,10 @@ export default function Report() {
         ))}
       </div>
       <div id="rp-panel" role="tabpanel" aria-labelledby={`tab-${tab}`}>
-        {tab === 'overview' ? <Overview d={q.data} />
-          : tab === 'contents' ? <Contents d={q.data} onPage={(p) => go('pages', { page: String(p) })} />
-            : <Pages d={q.data} />}
+        {tab === 'details' ? <Overview d={q.data} />
+          : tab === 'read' ? <Read d={q.data} />
+            : q.data.analysis ? <Summary d={q.data} />
+              : <div className="notice">The summary appears once the text has been extracted. <button type="button" className="btn small" onClick={() => go('details')}>See processing status</button></div>}
       </div>
     </>
   )
@@ -274,87 +279,6 @@ function EditForm({ r, onDone }: { r: R; onDone: () => void }) {
         <button type="button" className="btn" onClick={onDone}>Cancel</button>
         <button type="submit" className="btn primary" aria-busy={save.isPending}>Save</button>
       </div>
-    </form>
-  )
-}
-
-function Contents({ d, onPage }: { d: ReportDetail; onPage: (p: number) => void }) {
-  if (!d.pages.length) return <div className="notice">No text has been extracted yet.</div>
-  if (!d.sections.length) return <div className="notice">This PDF has no bookmarks, so there is no table of contents. Use the page text view; every page keeps its page number.</div>
-  return (
-    <section className="card">
-      <p className="xsmall muted">From the PDF's own bookmarks. Page numbers are physical pages in the file, which can differ from the numbers printed on the page.</p>
-      <ol className="rp-toc">
-        {d.sections.map((s) => (
-          <li key={s.ord} style={{ paddingInlineStart: `${(s.level - 1) * 16}px` }}>
-            <button type="button" className="rp-toc-item" onClick={() => onPage(s.page_start)}>
-              <span>{s.title}</span><span className="xsmall muted nowrap">{s.page_start === s.page_end ? `p. ${s.page_start}` : `pp. ${s.page_start} to ${s.page_end}`}</span>
-            </button>
-          </li>))}
-      </ol>
-    </section>
-  )
-}
-
-function Pages({ d }: { d: ReportDetail }) {
-  const id = d.report.id
-  const [params, setParams] = useSearchParams()
-  const total = d.pages.length
-  const page = Math.min(Math.max(1, Number(params.get('page')) || 1), Math.max(1, total))
-  const find = params.get('find') ?? ''
-  const [text, setText] = useState(find)
-  const set = (patch: Record<string, string>) => setParams((p) => { const n = new URLSearchParams(p); n.set('tab', 'pages'); Object.entries(patch).forEach(([k, v]) => v ? n.set(k, v) : n.delete(k)); return n }, { replace: true })
-  const pq = useQuery({ queryKey: ['report-page', id, page], queryFn: () => api.get<{ pages: { page_no: number; label: string | null; text: string }[] }>(`${reportsPath(id)}/pages${qs({ start: page, count: 1 })}`), enabled: total > 0 })
-  const sq = useQuery({ queryKey: ['report-search', id, find], queryFn: () => api.get<{ results: { page_no: number; label: string | null; snip: string }[] }>(`${reportsPath(id)}/search${qs({ q: find })}`), enabled: !!find })
-  if (!total) return <div className="notice">No text has been extracted yet.</div>
-  const p = pq.data?.pages[0]
-  const sec = [...d.sections].reverse().find((s) => s.page_start <= page)
-  return (
-    <div className="rp-pages">
-      <aside className="rp-find">
-        <form role="search" className="rp-search" onSubmit={(e) => { e.preventDefault(); set({ find: text.trim() }) }}>
-          <label className="sr-only" htmlFor="rp-find">Search this report</label>
-          <input id="rp-find" className="input" type="search" placeholder="Search this report" value={text} onChange={(e) => { setText(e.target.value); if (!e.target.value) set({ find: '' }) }} />
-          <button type="submit" className="btn">Find</button>
-        </form>
-        {find && (sq.isLoading ? <Loading lines={2} /> : (
-          <>
-            <p className="xsmall muted" role="status">{sq.data?.results.length ? `${sq.data.results.length} page${sq.data.results.length === 1 ? '' : 's'} match` : 'No pages match.'}</p>
-            <ul className="rp-hits">{sq.data?.results.map((h) => (
-              <li key={h.page_no}><button type="button" className={`rp-hit ${h.page_no === page ? 'on' : ''}`} aria-current={h.page_no === page || undefined} onClick={() => set({ page: String(h.page_no) })}>
-                <span className="xsmall rp-hit-page">Page {h.page_no}{h.label ? ` (printed ${h.label})` : ''}</span><span className="small"><MarkedText text={h.snip} /></span>
-              </button></li>))}
-            </ul>
-          </>
-        ))}
-      </aside>
-      <section className="card rp-page-card" aria-labelledby="rp-page-h">
-        <div className="row between wrap rp-pager">
-          <h2 id="rp-page-h" className="rp-h">Page {page} of {total}{p?.label ? <span className="xsmall muted"> (printed {p.label})</span> : null}</h2>
-          <div className="row wrap">
-            <button type="button" className="btn small" disabled={page <= 1} onClick={() => set({ page: String(page - 1) })}>Previous</button>
-            <GotoPage key={page} page={page} total={total} onGo={(n) => set({ page: String(n) })} />
-            <button type="button" className="btn small" disabled={page >= total} onClick={() => set({ page: String(page + 1) })}>Next</button>
-          </div>
-        </div>
-        {sec && <p className="xsmall muted mb-0">Section: {sec.title}</p>}
-        {pq.isLoading ? <Loading /> : p && p.text ? (
-          <div className="rp-text" tabIndex={0} aria-label={`Text of page ${page}`}><Highlight text={p.text} terms={queryTerms(find)} /></div>
-        ) : <p className="notice">No text on this page. It may be an image, chart or blank page.</p>}
-        <p className="xsmall muted mb-0">Extracted text, shown as plain text. Layout, charts and images are not reproduced; check the PDF for figures.</p>
-      </section>
-    </div>
-  )
-}
-
-/** Keyed by the current page, so it resets when the page changes. */
-function GotoPage({ page, total, onGo }: { page: number; total: number; onGo: (n: number) => void }) {
-  const [v, setV] = useState(String(page))
-  return (
-    <form className="row" onSubmit={(e) => { e.preventDefault(); const n = Number(v); if (n >= 1 && n <= total) onGo(n) }}>
-      <label className="sr-only" htmlFor="rp-goto">Go to page</label>
-      <input id="rp-goto" className="input rp-goto" inputMode="numeric" value={v} onChange={(e) => setV(e.target.value.replace(/\D/g, ''))} />
-      <button type="submit" className="btn small">Go</button>
     </form>
   )
 }

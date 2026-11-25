@@ -384,7 +384,8 @@ def _suggest_sources(conn, r: sqlite3.Row) -> list[dict]:
     if r["source_id"]:
         return []
     meta = jloads(r["pdf_meta"], {}) or {}
-    hay = " ".join(filter(None, [r["title"], r["original_filename"], meta.get("author"), meta.get("title"), meta.get("subject")])).lower()
+    running = (jloads(r["analysis"], {}) or {}).get("running_title")
+    hay = " ".join(filter(None, [r["title"], r["original_filename"], meta.get("author"), meta.get("title"), meta.get("subject"), running])).lower()
     out = []
     for s in conn.execute("SELECT id, publisher, series, frequency FROM report_sources"):
         names = [n.strip().lower() for n in re.split(r"[/(),]", s["publisher"]) if len(n.strip()) >= 4]
@@ -400,7 +401,9 @@ def get_report(rid: int, conn: sqlite3.Connection = Depends(get_db)):
     r = _get(conn, rid)
     d = _row(r)
     d.pop("sha256", None)
+    d.pop("analysis", None)
     d["sha256_prefix"] = r["sha256"][:12] if r["sha256"] else None
+    analysis = jloads(r["analysis"], None)
     src = conn.execute("SELECT * FROM report_sources WHERE id=?", (r["source_id"],)).fetchone() if r["source_id"] else None
     sections = [dict(s) for s in conn.execute(
         "SELECT ord, level, title, page_start, page_end, origin FROM report_sections WHERE report_id=? ORDER BY ord", (rid,))]
@@ -410,7 +413,7 @@ def get_report(rid: int, conn: sqlite3.Connection = Depends(get_db)):
     if r["source_id"]:
         editions = [dict(e) for e in conn.execute(
             "SELECT id, title, edition, published_on, status FROM reports WHERE source_id=? AND id<>? ORDER BY published_on DESC", (r["source_id"], rid))]
-    return {"report": d, "source": dict(src) if src else None, "sections": sections, "pages": pages, "jobs": jobs,
+    return {"report": d, "analysis": analysis, "source": dict(src) if src else None, "sections": sections, "pages": pages, "jobs": jobs,
             "editions": editions, "suggested_sources": _suggest_sources(conn, r)}
 
 
@@ -501,6 +504,19 @@ def pages(rid: int, start: int = 1, count: int = 5, conn: sqlite3.Connection = D
     rows = conn.execute("SELECT page_no, label, text FROM report_pages WHERE report_id=? AND page_no>=? ORDER BY page_no LIMIT ?",
                         (rid, max(1, start), count))
     return {"pages": [dict(p) for p in rows]}
+
+
+@router.get("/{rid}/read")
+def read(rid: int, start: int = 1, count: int = 4, raw: bool = False, conn: sqlite3.Connection = Depends(get_db)):
+    """Pages as reading blocks (headings, paragraphs, lists, figure text), with the raw text as a fallback."""
+    _get(conn, rid)
+    count = max(1, min(count, 16))
+    out = []
+    for p in conn.execute("SELECT page_no, label, text, blocks FROM report_pages WHERE report_id=? AND page_no>=? ORDER BY page_no LIMIT ?",
+                          (rid, max(1, start), count)):
+        out.append({"page_no": p["page_no"], "label": p["label"], "blocks": jloads(p["blocks"], None),
+                    "text": p["text"] if raw or p["blocks"] is None else None})
+    return {"pages": out}
 
 
 @router.get("/{rid}/search")

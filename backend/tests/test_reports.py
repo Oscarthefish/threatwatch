@@ -243,3 +243,115 @@ def test_pdf_text_is_data_not_instructions(client, conn):
     assert "<script>" in page  # stored verbatim as text; the UI renders it as text, never as HTML
     assert conn.execute("SELECT COUNT(*) FROM reports").fetchone()[0] == 1
     assert jloads(conn.execute("SELECT meta_source FROM reports WHERE id=?", (rid,)).fetchone()[0], {})["title"] == "filename"
+
+
+# ---------------------------------------------------------------- reading view and highlights (synthetic text)
+HEADER = "SYNTHETIC Labs Threat Report"
+
+
+def page(n: int, body: list[str], label: str | None = "01 ACCESS") -> str:
+    return "\n".join([str(n), HEADER, *body] + ([label] if label else []))
+
+
+BODY = [
+    "Attackers increasingly reuse stolen browser sessions to act as real users across",
+    "cloud applications without a fresh sign-in.",
+    "Session Theft at Scale",
+    "In 2025, we observed over 1,200 incidents where tokens were replayed from new",
+    "devices, and roughly 40% of them involved help desk resets. The tracking model",
+    "ASA 5500-X and CVE-2025-12345 are mentioned here without any statistic attached.",
+]
+
+
+def test_reading_blocks_rejoin_paragraphs_and_find_headings():
+    from app.reports import reading
+    pages = [page(i, BODY) for i in range(1, 7)]
+    lay = reading.layout(pages)
+    assert lay["running_title"] == HEADER
+    bl, labels = reading.blocks(pages[1], set(lay["repeated"]), [])
+    assert HEADER in labels and "01 ACCESS" in labels
+    assert [b["type"] for b in bl] == ["p", "h", "p"]
+    assert bl[0]["text"].startswith("Attackers increasingly") and bl[0]["text"].endswith("fresh sign-in.")
+    assert bl[1]["text"] == "Session Theft at Scale"
+
+
+def test_reading_lists_figures_kerning_and_wrapped_headings():
+    from app.reports import reading
+    text = "\n".join([
+        "Living Off", "the Pipeline", "Key T akeaways",
+        " + Adversaries inject malicious logic", "directly into build pipelines",
+        " + Defenders should validate code integrity",
+        "This paragraph is long enough to set a typical line width for the page here and",
+        "it carries on across several full lines, the way a column of real report prose",
+        "does, so the median line length reflects the body text rather than the labels.",
+        "Front Company", "example-front.test", "Phone Number", "Shell LLC", "Another LLC",
+        "Trusted Identity, Untrusted Behavior",
+        "One of the most significant hurdles today is the paradox of valid identities.",
+    ])
+    bl, _ = reading.blocks(text, set(), [])
+    kinds = [(b["type"], b["text"]) for b in bl]
+    assert ("h", "Living Off the Pipeline") in kinds and ("h", "Key Takeaways") in kinds
+    assert ("li", "Adversaries inject malicious logic directly into build pipelines") in kinds
+    fig = [b for b in bl if b["type"] == "figure"]
+    assert fig and "Phone Number" in fig[0]["text"] and "paradox" not in fig[0]["text"]
+    assert any(b["type"] == "p" and b["text"].startswith("One of the most") for b in bl)
+
+
+def test_highlights_takeaways_playbook_vendor_stats_and_chapters(conn):
+    from app.reports import reading
+    chapter_open = "\n".join(["01", "ACCESS", "The Identity Paradox", "Key Takeaways",
+                              " + Identity abuse lets attackers act as users", " + Monitor behaviour after sign-in", HEADER])
+    playbook = page(4, [
+        "Secure the MFA Enrollment Process",
+        "New authenticator enrolments should be treated as high-risk events and verified out of band.",
+        "Defusing the Identity Paradox",
+        "Use SYNTHETIC Labs’s Guardian Console to block session theft for SYNTHETIC Labs customers.",
+        "PLAYBOOK"])
+    pages = [chapter_open, page(2, BODY), page(3, BODY), playbook, page(5, BODY), page(6, BODY, "02 PERSISTENCE"),
+             page(7, BODY, "02 PERSISTENCE"), page(8, BODY, "PLAYBOOK")]
+    a = reading.analyse(conn, pages, "SYNTHETIC Labs")
+    h = a["highlights"]
+    assert [t["text"] for t in h["takeaways"]] == ["Identity abuse lets attackers act as users", "Monitor behaviour after sign-in"]
+    assert a["chapters"][0] == {"number": "01", "title": "Access", "subtitle": "The Identity Paradox", "start": 1, "end": 5}
+    rec = [r for r in h["recommendations"] if r["title"] == "Secure the MFA Enrollment Process"]
+    assert rec and rec[0]["page"] == 4 and rec[0]["chapter"] == "01 Access"
+    assert any("Guardian Console" in v["text"] for v in h["vendor_guidance"])
+    assert not any("Guardian Console" in r["text"] for r in h["recommendations"])
+    stats = [s["text"] for s in h["statistics"]]
+    assert any("over 1,200 incidents" in s for s in stats)
+    assert not any("5500-X" in s for s in stats)  # model numbers, CVE ids and years are not statistics
+
+
+def test_techniques_validated_named_and_generic(conn):
+    from app.reports import reading
+    conn.executemany("INSERT INTO attack_techniques(attack_id, stix_id, name, tactics, url) VALUES (?,?,?,?,?)", [
+        ("T1539", "x1", "Steal Web Session Cookie", '["credential-access"]', "u"),
+        ("T1685", "x2", "Disable or Modify Tools", '["defense-impairment"]', "u"),
+        ("T1556.006", "x3", "Multi-Factor Authentication", '["credential-access"]', "u"),
+        ("T1593.002", "x4", "Search Engines", '["reconnaissance"]', "u")])
+    conn.execute("INSERT INTO attack_revoked(old_id, new_id) VALUES ('T1562', 'T1685')")
+    text = ("Adversaries used T1562 and T9999 while stealing tokens (Steal Web Session Cookie). Enforce "
+            "multi-factor authentication everywhere. Search engines were also used.")
+    t = {x["id"]: x for x in reading._techniques(conn, [[{"type": "p", "text": text}]])}
+    assert t["T1685"]["basis"] == "cited"  # revoked ID resolved to its replacement
+    assert t["T1539"]["basis"] == "named"
+    assert "T9999" not in t and "T1556.006" not in t and "T1593.002" not in t
+
+
+def test_machine_named_upload_takes_running_title_and_read_api(client, conn):
+    pages = [[HEADER, f"Page {i} text about session theft that is long enough to count as a real line of prose.",
+              "Another long line of prose so that the page has a usable text layer for the test.", "01 ACCESS"] for i in range(1, 7)]
+    rid = upload(client, make_pdf(pages), name="d94b3c15-bd06-442e-b20a-c15f97228231.pdf").json()["id"]
+    process.process_queued(conn)
+    d = client.get(f"/api/reports/{rid}").json()
+    assert d["report"]["title"] == HEADER and d["report"]["meta_source"]["title"] == "layout"
+    assert d["analysis"]["running_title"] == HEADER and d["analysis"]["version"] >= 1
+    pg = client.get(f"/api/reports/{rid}/read?start=2&count=2").json()["pages"]
+    assert [p["page_no"] for p in pg] == [2, 3] and pg[0]["blocks"][0]["type"] == "p"
+    assert HEADER not in pg[0]["blocks"][0]["text"]
+    # a readable file name is kept; the analysis can be re-run after a rules change
+    rid2 = upload(client, make_pdf(pages[:3] + [["different page"]]), name="Quarterly brief.pdf").json()["id"]
+    process.process_queued(conn)
+    assert client.get(f"/api/reports/{rid2}").json()["report"]["title"] == "Quarterly brief"
+    conn.execute("UPDATE reports SET analysis_version=0")
+    assert process.reanalyse_stale(conn) == 2

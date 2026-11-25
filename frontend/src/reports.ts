@@ -25,8 +25,21 @@ export interface Job {
   id: number; kind: string; status: string; extractor: string | null; extractor_version: number | null; pages: number | null
   text_pages: number | null; chars: number | null; sections: number | null; detail: string | null; started_at: string; finished_at: string | null
 }
+export interface Block { type: 'h' | 'p' | 'li' | 'figure'; text: string; vendor?: boolean }
+export interface Chapter { number: string; title: string; subtitle: string | null; start: number; end: number }
+interface Item { page: number; chapter: string | null; text: string }
+export interface Named { value: string; pages: number[]; known?: { cvss: number | null; kev: boolean } | null }
+export interface Analysis {
+  version: number; running_title: string | null; chapters: Chapter[]
+  highlights: {
+    takeaways: Item[]; recommendations: (Item & { title: string | null })[]; vendor_guidance: { page: number; text: string }[]
+    statistics: Item[]; actors: Named[]; malware: Named[]; technologies: Named[]; cves: Named[]
+    techniques: { id: string; name: string; basis: 'cited' | 'named'; pages: number[] }[]
+  }
+}
+export interface ReadPage { page_no: number; label: string | null; blocks: Block[] | null; text: string | null }
 export interface ReportDetail {
-  report: Report; source: Source | null; jobs: Job[]
+  report: Report; analysis: Analysis | null; source: Source | null; jobs: Job[]
   sections: { ord: number; level: number; title: string; page_start: number; page_end: number; origin: string }[]
   pages: { page_no: number; label: string | null; chars: number }[]
   editions: { id: number; title: string; edition: string | null; published_on: string | null; status: ReportStatus }[]
@@ -47,7 +60,7 @@ export const FREQ_LABEL: Record<string, string> = {
   annual: 'Annual', semiannual: 'Twice a year', quarterly: 'Quarterly', monthly: 'Monthly', weekly: 'Weekly', irregular: 'Irregular', unknown: 'Unknown',
 }
 export const REGION_LABEL: Record<string, string> = { GLOBAL: 'Global', NZ: 'New Zealand', AU: 'Australia', APAC: 'APAC', US: 'United States', UK: 'United Kingdom', EU: 'Europe' }
-export const META_SOURCE_LABEL: Record<string, string> = { user: 'Entered by you', pdf: 'From PDF metadata', filename: 'From file name', series: 'From the series' }
+export const META_SOURCE_LABEL: Record<string, string> = { user: 'Entered by you', pdf: 'From PDF metadata', filename: 'From file name', series: 'From the series', layout: 'From the page headers' }
 export const CONF_LABEL: Record<string, string> = { high: 'Good text layer', medium: 'Partial text layer', low: 'Little usable text' }
 
 export const reportsPath = (id: number | string) => `/api/reports/${id}`

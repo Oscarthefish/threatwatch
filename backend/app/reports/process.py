@@ -226,7 +226,53 @@ def process(conn: sqlite3.Connection, report_id: int) -> str:
                      ("ok" if status == "processed" else status, len(pages), text_pages, sum(len(p["text"]) for p in pages),
                       len(sections), detail, now, job))
     log.info("report %s: %s, %d pages, %d with text, %d sections", report_id, status, len(pages), text_pages, len(sections))
+    analyse(conn, report_id)
     return status
+
+
+MACHINE_NAME = re.compile(r"^(?:[0-9a-f]{8}[- ]?[0-9a-f]{4}[- ]?[0-9a-f]{4}[- ]?[0-9a-f]{4}[- ]?[0-9a-f]{12}|[0-9a-f -]{16,}|[\d _-]+"
+                          r"|(?:scan|document|download|file|report|untitled)[\d _-]*)$", re.I)
+
+
+def analyse(conn: sqlite3.Connection, report_id: int) -> bool:
+    """Reading blocks and highlights from the stored page text. Safe to re-run; never touches fields a person set."""
+    from . import reading
+
+    r = conn.execute("SELECT id, title, publisher, meta_source, original_filename FROM reports WHERE id=?", (report_id,)).fetchone()
+    if not r:
+        return False
+    rows = conn.execute("SELECT id, text FROM report_pages WHERE report_id=? ORDER BY page_no", (report_id,)).fetchall()
+    if not rows:
+        return False
+    try:
+        a = reading.analyse(conn, [p["text"] for p in rows], r["publisher"])
+    except Exception:  # a heuristic failure must never break the report
+        log.exception("report %s: analysis failed", report_id)
+        return False
+    meta_source = jloads(r["meta_source"], {}) or {}
+    title = r["title"]
+    stem = re.sub(r"\.pdf$", "", r["original_filename"] or "", flags=re.I)
+    if meta_source.get("title") == "filename" and (not stem or MACHINE_NAME.match(stem)):
+        first = [ln.strip() for ln in rows[0]["text"].split("\n") if ln.strip()][:4]
+        guess = a["running_title"] or (" ".join(first) if first and sum(map(len, first)) <= 120 else None)
+        if guess and len(guess) >= 6:
+            title, meta_source["title"] = re.sub(r"\s+", " ", guess)[:200], "layout"
+    summary = {k: v for k, v in a.items() if k != "pages"}
+    with tx(conn):
+        conn.executemany("UPDATE report_pages SET blocks=?, labels=? WHERE id=?",
+                         [(jdumps(pg["blocks"]), jdumps(pg["labels"]), row["id"]) for pg, row in zip(a["pages"], rows)])
+        conn.execute("UPDATE reports SET analysis=?, analysis_version=?, title=?, meta_source=? WHERE id=?",
+                     (jdumps(summary), a["version"], title, jdumps(meta_source), report_id))
+    return True
+
+
+def reanalyse_stale(conn: sqlite3.Connection) -> int:
+    """Re-run the reading analysis for reports processed with an older version (no PDF re-read needed)."""
+    from .reading import ANALYSIS_VERSION
+
+    ids = [r[0] for r in conn.execute(
+        "SELECT id FROM reports WHERE status IN ('processed','needs_review') AND COALESCE(analysis_version,0) < ?", (ANALYSIS_VERSION,))]
+    return sum(1 for rid in ids if analyse(conn, rid))
 
 
 def process_queued(conn: sqlite3.Connection, limit: int = 3) -> int:
